@@ -1,9 +1,10 @@
-use crate::model::player::Player;
+use crate::{model::player::Player, visor::{Component, view::TextView}};
 use rand::{distributions::Standard, prelude::Distribution};
 use std::{
     fmt::{Debug, Display},
     str::FromStr,
 };
+use crate::visor::view::PanelBuilder;
 
 use self::patternline::PatternLine;
 
@@ -158,9 +159,6 @@ impl CommonArea {
     pub fn inspect(&self) -> &[Pickable] {
         &self.0
     }
-}
-
-impl CommonArea {
     pub fn new(mut pickables: Vec<Pickable>) -> Self {
         let mut initial = vec![Pickable::FirstPlayerToken];
         initial.append(&mut pickables);
@@ -170,6 +168,42 @@ impl CommonArea {
     pub fn add(&mut self, tiles: &[Tile]) {
         let mut tiles = tiles.iter().copied().map(Pickable::Tile).collect();
         self.0.append(&mut tiles);
+        self.0.sort();
+    }
+}
+
+struct CommonAreaView<'a> {
+    common_area: &'a CommonArea,
+    selected: Option<Pickable>,
+}
+
+impl<'a> CommonAreaView<'a> {
+    fn new(common_area: &'a CommonArea, selected: Option<Pickable>) -> Self { Self { common_area, selected } }
+
+}
+
+impl<'a> Component for CommonAreaView<'a> {
+    fn render(&self, writer: &mut crate::visor::renderer::RootedRenderer) {
+        let output: String = self.common_area.inspect()
+            .iter()
+            .map(|t| t.to_string())
+            .collect();
+
+        let panel = PanelBuilder::default()
+            .name("Common area")
+            .padding(0)
+            .component(Box::new(TextView::from(output)))
+            .build()
+            .unwrap();
+        panel.render(writer);
+    }
+
+    fn declare_dimensions(&self) -> (u16, u16) {
+        (12, 1)
+    }
+
+    fn handle(&mut self, _event: &crate::visor::UserInput) -> crate::visor::UserEventHandled {
+        crate::visor::UserEventHandled::Noop
     }
 }
 
@@ -286,7 +320,7 @@ pub struct Game<const N: usize> {
     players: [Player; N],
     factories: [Factory; 4],
     state: GameState,
-    common_area: CommonArea,
+    pub common_area: CommonArea,
 }
 
 impl<const N: usize> Game<N> {
