@@ -20,6 +20,7 @@ pub mod patternline;
 pub mod player;
 pub mod tilecollection;
 pub mod view;
+pub mod wall;
 
 pub enum AppEvent {
     Select(Direction),
@@ -38,11 +39,6 @@ pub enum AppEvent {
         tile: Tile,
         row_id: usize,
     },
-}
-
-pub enum Slot {
-    Empty,
-    Tile(Tile),
 }
 
 pub trait Scrollable<T> {
