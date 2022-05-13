@@ -42,6 +42,19 @@ impl Default for BuildingArea {
 }
 
 impl BuildingArea {
+    pub(super) fn move_tiles_to_wall(&mut self) {
+        for (i, pl) in &mut self.in_progress.iter_mut().enumerate() {
+            if pl.is_full() {
+                let tile = pl.flush();
+                self.wall.fill_slot(i, tile);
+            }
+        }
+    }
+
+    pub fn flush_floorline(&mut self) {
+        self.wall.reset_floorline(&mut self.floorline);
+    }
+
     pub fn get_row(&self, row_number: usize) -> &PatternLine {
         &self.in_progress[row_number]
     }
@@ -102,6 +115,24 @@ impl BuildingArea {
         common_area.add(&non_picked);
         factory.0 = None;
         self.floorline.add_tiles(&vec![picked_tile; remaining]);
+        Ok(())
+    }
+
+    pub fn pick_from_common_area(
+        &mut self,
+        row_number: usize,
+        picked_tile: Tile,
+        how_many: usize,
+        first_player: bool,
+    ) -> Result<(), String> {
+        let pattern_line = &mut self.in_progress[row_number];
+        let remaining = pattern_line.accept(picked_tile, how_many)?;
+        let mut to_floor = vec![picked_tile; remaining];
+        if first_player {
+            to_floor.push(Tile::FirstPlayer);
+        }
+
+        self.floorline.add_tiles(&to_floor);
         Ok(())
     }
 }

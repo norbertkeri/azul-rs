@@ -14,6 +14,17 @@ impl FloorLine {
         })
     }
 
+    pub fn reset(&mut self) {
+        *self = Default::default();
+    }
+
+    pub fn has_first_player_token(&self) -> bool {
+        self.0.iter().any(|slot| match slot {
+            Some(tile) => *tile == Tile::FirstPlayer,
+            None => false,
+        })
+    }
+
     fn points_for_slot(slot_id: usize) -> u8 {
         match slot_id {
             0..=1 => 1,

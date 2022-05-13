@@ -18,6 +18,32 @@ impl PatternLine {
         Self::Free { length }
     }
 
+    pub fn is_full(&self) -> bool {
+        match self {
+            PatternLine::Free { length: _ } => false,
+            PatternLine::Taken {
+                tile: _,
+                length,
+                taken,
+            } => length == taken,
+        }
+    }
+
+    pub(super) fn flush(&mut self) -> Tile {
+        if !self.is_full() {
+            panic!(
+                "You are trying to flush a patternline that is not full: {:?}",
+                self
+            );
+        }
+        let (tile, length) = match *self {
+            PatternLine::Free { .. } => unreachable!(),
+            PatternLine::Taken { tile, length, .. } => (tile, length),
+        };
+        *self = Self::new_free(length);
+        tile
+    }
+
     pub fn new_taken(tile: Tile, length: usize, taken: usize) -> Self {
         if length < taken {
             panic!("Cannot create a taken patternline that has more taken blocks ({}), than its length ({})", taken, length);

@@ -5,19 +5,19 @@ use crate::{
     visor::{renderer, Component},
 };
 
-use super::Slot;
+use super::{floorline::FloorLine, Slot};
 
 const AREA_LENGTH: usize = 5;
 
 pub struct Wall {
     slots: [[Slot; AREA_LENGTH]; AREA_LENGTH],
-    points: u16,
+    points: u8,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum FillResult {
-    PointsGained(u16),
-    PointsGainedAndGameOver(u16),
+    PointsGained(u8),
+    PointsGainedAndGameOver(u8),
 }
 
 impl Wall {
@@ -30,7 +30,28 @@ impl Wall {
             .unwrap()
     }
 
-    pub fn fill_slot(&mut self, row: usize, col: usize) -> FillResult {
+    pub fn reset_floorline(&mut self, floorline: &mut FloorLine) {
+        let minus = floorline.calculate_minus_points();
+        let total = if self.points <= minus {
+            0
+        } else {
+            self.points - minus
+        };
+        self.points = total;
+        floorline.reset();
+    }
+
+    fn find_col_for_tile(&self, row_number: usize, what: Tile) -> usize {
+        self.slots[row_number]
+            .iter()
+            .position(|slot| match slot {
+                Slot::Filled(tile) | Slot::Free(tile) => *tile == what,
+            })
+            .unwrap()
+    }
+
+    pub(super) fn fill_slot(&mut self, row: usize, tile: Tile) -> FillResult {
+        let col = self.find_col_for_tile(row, tile);
         match self.slots[row][col] {
             Slot::Filled(_) => panic!("You are trying to fill an already filled slot"),
             Slot::Free(tile) => {
@@ -122,7 +143,7 @@ impl Wall {
         tiles.iter().any(|(_tile, count)| *count == 5)
     }
 
-    pub fn count_points(&self) -> u16 {
+    pub fn count_points(&self) -> u8 {
         self.points
     }
 
@@ -182,7 +203,10 @@ impl<'a> Component for WallView<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::buildingarea::wall::FillResult;
+    use crate::model::{
+        buildingarea::{wall::FillResult, Slot},
+        Tile,
+    };
 
     use super::{Wall, AREA_LENGTH};
     use std::collections::BTreeMap;
@@ -213,14 +237,21 @@ mod tests {
                 }
             }
             for (_i, (row, col)) in steps {
-                wall.fill_slot(row, col);
+                let tile = wall.find_tile_for(row, col);
+                wall.fill_slot(row, tile);
             }
             wall
+        }
+
+        fn find_tile_for(&self, row: usize, col: usize) -> Tile {
+            match self.slots[row][col] {
+                Slot::Filled(tile) | Slot::Free(tile) => tile,
+            }
         }
     }
 
     #[allow(dead_code)]
-    fn expect_points(wall: &Wall, expected_points: u16) {
+    fn expect_points(wall: &Wall, expected_points: u8) {
         pretty_assertions::assert_eq!(wall.count_points(), expected_points);
     }
 
@@ -280,7 +311,7 @@ mod tests {
 00040
 00005
 ", 15; "sums diagonal")]
-    fn test_counting_score(input: &str, expected: u16) {
+    fn test_counting_score(input: &str, expected: u8) {
         let wall = Wall::from_string(input.trim());
         expect_points(&wall, expected);
     }
@@ -296,7 +327,8 @@ mod tests {
 "
         .trim();
         let mut wall = Wall::from_string(input);
-        let result = wall.fill_slot(0, 4);
+        let tile = wall.find_tile_for(0, 4);
+        let result = wall.fill_slot(0, tile);
         pretty_assertions::assert_eq!(result, FillResult::PointsGainedAndGameOver(7));
     }
 }

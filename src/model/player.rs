@@ -28,4 +28,8 @@ impl Player {
     pub fn get_buildingarea_mut(&mut self) -> &mut BuildingArea {
         &mut self.building_area
     }
+
+    pub fn has_first_player_token(&self) -> bool {
+        self.building_area.get_floorline().has_first_player_token()
+    }
 }

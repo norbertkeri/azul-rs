@@ -160,6 +160,7 @@ impl FromStr for Tile {
     }
 }
 
+#[derive(Debug)]
 pub struct CommonArea(Vec<Tile>);
 
 impl HasTileCollection for CommonArea {
@@ -188,6 +189,19 @@ impl CommonArea {
 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    pub fn pick_tile(&mut self, tile: Tile) -> (usize, bool) {
+        let count = self.count_tile(tile);
+        let has_firstplayer = self.0.iter().any(|&t| t == Tile::FirstPlayer);
+        let new: Vec<_> = self
+            .0
+            .iter()
+            .copied()
+            .filter(|&t| tile != t && t != Tile::FirstPlayer)
+            .collect();
+        self.0 = new;
+        (count, has_firstplayer)
     }
 }
 
@@ -492,7 +506,9 @@ impl<const N: usize> Game<N> {
                 let buildingarea = self.get_players()[player_id].get_buildingarea();
                 let rows = buildingarea.get_rows_that_can_accept(tile);
                 let first_that_can_fit = rows.first();
-                assert!(first_that_can_fit.is_some());
+                if first_that_can_fit.is_none() {
+                    todo!("No rows can fit the tiles, all should go to the floorline");
+                }
                 let (selected_row_id, _) = *first_that_can_fit.unwrap();
                 GameState::PickRowToPutTiles {
                     player_id,
@@ -511,17 +527,56 @@ impl<const N: usize> Game<N> {
 
                 let pickable_sources = self.find_pickable_sources();
                 let next_source = pickable_sources.first();
-                if next_source.is_none() {
-                    panic!("Ran out of pickable sources, advance gamestate to tiling and scoring");
-                }
-                GameState::PickSource {
-                    player_id: (N - 1) - player_id,
-                    current_source: *next_source.unwrap(),
+                if let Some(next_source) = next_source {
+                    GameState::PickSource {
+                        player_id: (N - 1) - player_id,
+                        current_source: *next_source,
+                    }
+                } else {
+                    self.advance_round()
                 }
             }
         };
 
         self.state = new_e;
+    }
+
+    fn reset_first_player_token(&mut self) -> usize {
+        let player_id = self
+            .players
+            .iter()
+            .enumerate()
+            .find(|(_i, player)| player.has_first_player_token())
+            .map(|(i, _)| i);
+        if player_id.is_none() {
+            panic!("Nobody has the first player token at the end of the round?");
+        }
+        self.common_area.add(&[Tile::FirstPlayer]);
+        player_id.unwrap()
+    }
+
+    fn advance_round(&mut self) -> GameState {
+        let next_player = self.reset_first_player_token();
+        self.flush_tiles();
+        self.refill_factories();
+        GameState::PickSource {
+            player_id: next_player,
+            current_source: TileSource::Factory(FactoryId(0)),
+        }
+    }
+
+    fn flush_tiles(&mut self) {
+        for p in self.players.iter_mut() {
+            let bg = p.get_buildingarea_mut();
+            bg.move_tiles_to_wall();
+            bg.flush_floorline();
+        }
+    }
+
+    fn refill_factories(&mut self) {
+        for f in self.factories.iter_mut() {
+            self.bag.fill_factory(f);
+        }
     }
 
     pub fn pick(
@@ -537,7 +592,10 @@ impl<const N: usize> Game<N> {
                 let factory = &mut self.factories[factory_id];
                 buildingarea.pick_factory(factory, &mut self.common_area, row_id, tile)
             }
-            TileSource::CommonArea => todo!(),
+            TileSource::CommonArea => {
+                let (count, has_firstplayer) = self.common_area.pick_tile(tile);
+                buildingarea.pick_from_common_area(row_id, tile, count, has_firstplayer)
+            }
         }
     }
 
