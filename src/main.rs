@@ -1,4 +1,4 @@
-#![allow(unused_imports)]
+#![warn(clippy::pedantic)]
 use std::io::Write;
 use std::{
     cell::RefCell,
@@ -7,12 +7,10 @@ use std::{
 };
 
 use azulrs::model::player::Player;
-use azulrs::model::view::{FactoryView, GameView};
-use azulrs::model::{Direction, Factory, Game, Tile};
+use azulrs::model::view::GameView;
+use azulrs::model::Game;
 use azulrs::visor::backend::TermionBackend;
-use azulrs::visor::layout::Layout;
-use azulrs::visor::view::{Panel, PanelBuilder, TextView};
-use azulrs::visor::{Component, Engine, UserInput};
+use azulrs::visor::{Engine, UserInput};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 
