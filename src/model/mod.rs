@@ -316,7 +316,7 @@ pub struct Game<const N: usize> {
     bag: Bag,
     is_over: bool,
     pub(crate) common_area: CommonArea,
-    player_id: usize,
+    current_player_id: usize,
     current_source: TileSource,
 }
 
@@ -397,7 +397,7 @@ impl<const N: usize> Game<N> {
             is_over: false,
             bag,
             common_area: CommonArea::default(),
-            player_id: 0,
+            current_player_id: 0,
             current_source: TileSource::Factory(0.into()),
         }
     }
@@ -454,7 +454,12 @@ impl<const N: usize> Game<N> {
                     selected_row_id,
                 } => {
                     let selected_row_id = self
-                        .find_adjacent_selectable_row(tile, self.player_id, selected_row_id, dir)
+                        .find_adjacent_selectable_row(
+                            tile,
+                            self.current_player_id,
+                            selected_row_id,
+                            dir,
+                        )
                         .unwrap_or(selected_row_id);
                     GameState::PickRowToPutTiles {
                         tile,
@@ -470,7 +475,7 @@ impl<const N: usize> Game<N> {
                 GameState::PickRowToPutTiles { .. } => panic!("Cannot happen"),
             },
             AppEvent::TransitionToPickRow { tile } => {
-                let buildingarea = self.get_players()[self.player_id].get_buildingarea();
+                let buildingarea = self.get_players()[self.current_player_id].get_buildingarea();
                 let rows = buildingarea.get_rows_that_can_accept(tile);
                 let first_that_can_fit = rows.first();
                 if first_that_can_fit.is_none() {
@@ -483,13 +488,13 @@ impl<const N: usize> Game<N> {
                 }
             }
             AppEvent::PlaceTiles { tile, row_id } => {
-                self.pick(self.current_source, tile, self.player_id, row_id)
+                self.pick(self.current_source, tile, self.current_player_id, row_id)
                     .unwrap();
 
                 let pickable_sources = self.find_pickable_sources();
                 let next_source = pickable_sources.first();
                 if let Some(next_source) = next_source {
-                    self.player_id = (N - 1) - self.player_id;
+                    self.current_player_id = (N - 1) - self.current_player_id;
                     self.current_source = *next_source;
                     GameState::PickSource
                 } else {
@@ -520,7 +525,7 @@ impl<const N: usize> Game<N> {
         let next_player = self.reset_first_player_token();
         self.is_over = self.flush_tiles().into();
         self.refill_factories();
-        self.player_id = next_player;
+        self.current_player_id = next_player;
         self.current_source = TileSource::Factory(FactoryId(0));
         GameState::PickSource
     }

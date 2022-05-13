@@ -39,12 +39,12 @@ impl<'a, const N: usize> From<&'a Game<N>> for PlayerAreaView<'a> {
         let players = game.get_players();
         match game.state {
             GameState::PickSource | GameState::PickTileFromSource { .. } => {
-                PlayerAreaView::new(players, game.player_id, None)
+                PlayerAreaView::new(players, game.current_player_id, None)
             }
             GameState::PickRowToPutTiles {
                 tile: _,
                 selected_row_id,
-            } => PlayerAreaView::new(players, game.player_id, Some(selected_row_id)),
+            } => PlayerAreaView::new(players, game.current_player_id, Some(selected_row_id)),
         }
     }
 }
