@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::model::player::Player;
 use rand::{distributions::Standard, prelude::Distribution};
 use std::{
@@ -37,6 +35,42 @@ pub enum AppEvent {
 pub enum Slot {
     Empty,
     Tile(Tile),
+}
+
+pub trait Scrollable<K, T>
+where
+    K: PartialEq,
+{
+    fn scroll(&self, pivot: usize, direction: Direction) -> Option<K>;
+}
+
+impl<K, T> Scrollable<K, T> for Vec<(K, T)>
+where
+    K: PartialEq<usize> + PartialEq<K> + Copy,
+{
+    fn scroll(&self, pivot: usize, direction: Direction) -> Option<K> {
+        let current_row_index = self
+            .iter()
+            .position(|(i, _)| i == &pivot)
+            .expect("The pivot is not in the vec?");
+
+        match (self.len(), direction) {
+            (count, Direction::Next) if count - 1 == current_row_index => {
+                let (first_index, _) = self.first().unwrap();
+                Some(*first_index)
+            }
+            (_, Direction::Prev) if current_row_index == 0 => {
+                let (last_index, _) = self.last().unwrap();
+                Some(*last_index)
+            }
+            (_, Direction::Next) => self
+                .get(current_row_index + 1)
+                .map(|(next_index, _)| *next_index),
+            (_, Direction::Prev) => self
+                .get(current_row_index - 1)
+                .map(|(prev_index, _)| *prev_index),
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -169,28 +203,23 @@ impl Factory {
         vec![]
     }
 
-    pub fn find_before(&self, before: Tile) -> Tile {
-        let distinct = self.distinct_tiles();
-        let i = distinct
-            .iter()
-            .position(|maybe_t| maybe_t == &before)
-            .expect("This tile is not in the factory?");
-        if i == 0 {
-            return *distinct.last().unwrap();
+    pub fn find_adjacent_tile(&self, tile: Tile, direction: Direction) -> Tile {
+        let distinct_tiles = self.distinct_tiles();
+        if distinct_tiles.len() == 1 {
+            return tile;
         }
-        distinct[i - 1]
-    }
-
-    pub fn find_after(&self, after: Tile) -> Tile {
-        let distinct = self.distinct_tiles();
-        let i = distinct
+        let i = distinct_tiles
             .iter()
-            .position(|maybe_t| maybe_t == &after)
+            .position(|maybe_t| maybe_t == &tile)
             .expect("This tile is not in the factory?");
-        if i == distinct.len() - 1 {
-            return *distinct.first().unwrap();
+        match (i, direction) {
+            (0, Direction::Prev) => *distinct_tiles.last().unwrap(),
+            (i, Direction::Next) if i == distinct_tiles.len() - 1 => {
+                *distinct_tiles.first().unwrap()
+            }
+            (i, Direction::Prev) => distinct_tiles[i - 1],
+            (i, Direction::Next) => distinct_tiles[i + 1],
         }
-        distinct[i + 1]
     }
 
     pub fn find_first_tile(&self) -> Option<Tile> {
@@ -266,16 +295,16 @@ impl<const N: usize> Game<N> {
         &self.players
     }
 
+    pub fn find_pickable_factories(&self) -> Vec<(usize, &Factory)> {
+        self.factories
+            .iter()
+            .enumerate()
+            .filter(|(_, f)| !f.is_empty())
+            .collect()
+    }
+
     pub fn find_first_tile_in_factory(&self, factory_id: usize) -> Tile {
         self.factories[factory_id].find_first_tile().unwrap() // TODO unwrap
-    }
-
-    pub fn find_next_tile_in_factory_after(&self, factory_id: usize, after: Tile) -> Tile {
-        self.factories[factory_id].find_after(after)
-    }
-
-    pub fn find_prev_tile_in_factory_after(&self, factory_id: usize, before: Tile) -> Tile {
-        self.factories[factory_id].find_before(before)
     }
 
     pub fn for_players(players: [Player; N]) -> Self {
@@ -309,27 +338,7 @@ impl<const N: usize> Game<N> {
     ) -> Option<usize> {
         let barea = self.get_players()[player_id].get_buildingarea();
         let rows = barea.get_rows_that_can_accept(tile, how_many);
-        let current_row_index = rows
-            .iter()
-            .position(|(i, _)| i == &current_row)
-            .expect("The row is not here?");
-
-        match (rows.len(), direction) {
-            (count, Direction::Next) if count - 1 == current_row_index => {
-                let (first_index, _) = rows.first().unwrap();
-                Some(*first_index)
-            }
-            (_, Direction::Prev) if current_row_index == 0 => {
-                let (last_index, _) = rows.last().unwrap();
-                Some(*last_index)
-            }
-            (_, Direction::Next) => rows
-                .get(current_row_index + 1)
-                .map(|(next_index, _)| *next_index),
-            (_, Direction::Prev) => rows
-                .get(current_row_index - 1)
-                .map(|(prev_index, _)| *prev_index),
-        }
+        rows.scroll(current_row, direction)
     }
 
     pub fn handle(&mut self, e: AppEvent) {
@@ -338,16 +347,23 @@ impl<const N: usize> Game<N> {
                 GameState::PickFactory {
                     player_id,
                     current_factory,
-                } => GameState::PickFactory {
-                    player_id,
-                    current_factory: current_factory + 1,
-                },
+                } => {
+                    let pickable_factories = self.find_pickable_factories();
+                    let next_factory_id = pickable_factories
+                        .scroll(current_factory, Direction::Next)
+                        .unwrap_or(current_factory);
+                    GameState::PickFactory {
+                        player_id,
+                        current_factory: next_factory_id,
+                    }
+                }
                 GameState::PickTileFromFactory {
                     player_id,
                     factory_id,
                     selected_tile,
                 } => {
-                    let next_tile = self.find_next_tile_in_factory_after(factory_id, selected_tile);
+                    let next_tile = self.factories[factory_id]
+                        .find_adjacent_tile(selected_tile, Direction::Next);
                     GameState::PickTileFromFactory {
                         player_id,
                         factory_id,
@@ -383,20 +399,27 @@ impl<const N: usize> Game<N> {
                 GameState::PickFactory {
                     player_id,
                     current_factory,
-                } => GameState::PickFactory {
-                    player_id,
-                    current_factory: current_factory - 1,
-                },
+                } => {
+                    let pickable_factories = self.find_pickable_factories();
+                    let next_factory_id = pickable_factories
+                        .scroll(current_factory, Direction::Prev)
+                        .unwrap_or(current_factory);
+                    GameState::PickFactory {
+                        player_id,
+                        current_factory: next_factory_id,
+                    }
+                }
                 GameState::PickTileFromFactory {
                     player_id,
                     factory_id,
                     selected_tile,
                 } => {
-                    let next_tile = self.find_prev_tile_in_factory_after(factory_id, selected_tile);
+                    let prev_tile = self.factories[factory_id]
+                        .find_adjacent_tile(selected_tile, Direction::Prev);
                     GameState::PickTileFromFactory {
                         player_id,
                         factory_id,
-                        selected_tile: next_tile,
+                        selected_tile: prev_tile,
                     }
                 }
                 GameState::PickRowToPutTiles {
@@ -436,19 +459,8 @@ impl<const N: usize> Game<N> {
                     factory_id: current_factory,
                     selected_tile: tile,
                 },
-                GameState::PickTileFromFactory {
-                    player_id: _,
-                    factory_id: _,
-                    selected_tile: _,
-                } => {
-                    panic!("Cannot happen");
-                }
-                GameState::PickRowToPutTiles {
-                    player_id: _,
-                    factory_id: _,
-                    tile: _,
-                    selected_row_id: _,
-                } => panic!("Cannot happen"),
+                GameState::PickTileFromFactory { .. } => panic!("Cannot happen"),
+                GameState::PickRowToPutTiles { .. } => panic!("Cannot happen"),
             },
             AppEvent::TransitionToPickRow {
                 player_id,
@@ -479,9 +491,14 @@ impl<const N: usize> Game<N> {
                 let buildingarea = self.players[player_id].get_buildingarea_mut();
                 let row = buildingarea.get_row_mut(row_id);
                 factory.pick(tile, &mut self.common_area, row).unwrap();
+                let pickable_factories = self.find_pickable_factories();
+                let next_factory = pickable_factories.first();
+                if next_factory.is_none() {
+                    panic!("Ran out of factories");
+                }
                 GameState::PickFactory {
                     player_id: 1 - player_id,
-                    current_factory: 0,
+                    current_factory: next_factory.unwrap().0,
                 }
             }
         };

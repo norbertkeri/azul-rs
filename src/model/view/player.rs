@@ -31,11 +31,6 @@ impl<'a> Component for PlayerView<'a> {
     }
 }
 
-struct PlayerAreaViewSelection {
-    player_id: usize,
-    building_row_id: usize,
-}
-
 pub struct PlayerAreaView<'a> {
     players: &'a [Player],
     current_player_id: usize,

@@ -8,7 +8,7 @@ use std::{
 
 use azulrs::model::player::Player;
 use azulrs::model::view::{FactoryView, GameView};
-use azulrs::model::{Factory, Game, Tile};
+use azulrs::model::{Direction, Factory, Game, Tile};
 use azulrs::visor::backend::TermionBackend;
 use azulrs::visor::layout::Layout;
 use azulrs::visor::view::{Panel, PanelBuilder, TextView};
