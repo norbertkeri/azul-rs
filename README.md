@@ -6,17 +6,29 @@ It looks like this right now:
 
 ![image of a game in progress](./assets/1650565479.png)
 
-At the moment it's two players only, with no remote multiplayer (so both players would have to sit at the same computer). There is a really basic TUI interface that I threw together using [termion](https://crates.io/crates/termion), which unfortunately doesn't lend itself well to playing the game, unless you already know the rules.
+# Legend
+The two players (Alice and Bob) are fixed at the moment. The empty rectangles are the tiling area, where you place the tiles. To the right of the tiling area is the wall, where you place the tiles, if you finish a row. When a tile is finished on the wall, it gets replaced with an X. The 1122233 numbers are the floor line, this is where tiles that you cannot put anywhere else will be placed, and earn minus points at the end of a round.
 
-Only about 40% of the game is implemented currently.
+The factories section are the tiles you can pick from, each letter represents a color. The "common" section is where the non-picked tiles land.
+
+# Controls
+
+* j - Selection down
+* k - Selection up
+* enter - Confirm
+* esc - Back
+
+At the moment it's two players only, with no remote multiplayer (so both players would have to sit at the same computer). There is a really basic TUI interface that I threw together using [termion](https://crates.io/crates/termion). Unfortunately this UI doesn't really lend itself to actually teaching the game, so unless you already know the rules, there is a good chance the game won't make much sense.
 
 ## Possible improvements as I go along
 
-- [ ] Actually finish the game logic
+The game logic is pretty much 95% there, the only thing that is missing is being able to put all tiles on the floor line, even if you have open rows. This was actually something that I completely missed from the rules.
+
+There are also some things left on my todo list that I'd like to eventually implement:
+
 - [ ] Have some kind of rules/legend explanation
 - [ ] Play with 3-4 players
 - [ ] Remote multiplayer
-- [x] Improve the view rendering
 
 ## Tests
 A major reason why I wanted to write my own TUI, and keep it without any styling (like colors) is that I can write tests like this:
@@ -48,4 +60,4 @@ fn test_two_panels_horizontally() {
     expect_component(panel, expected);
 }
 ```
-Basically, I can write the ASCII representation of a component inside the test, and assert against that, which is really neat. Of course the rendering code turned out to be harder than I expected, and I have to manually fiddle with dimensions right now, but hopefully I'll get that ironed out.
+Basically, I can write the ASCII representation of a component inside the test, and assert against that, which is really neat.
