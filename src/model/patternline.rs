@@ -117,11 +117,12 @@ impl<'a> Component for PatternLineView<'a> {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
         match *self.line {
             PatternLine::Free { length } => {
-                writer.write(&"☐".repeat(length));
+                writer.write(&format!("{: >5}", "☐".repeat(length)));
             },
             PatternLine::Taken { tile, length, taken } => {
-                writer.write(&"☐".repeat(length - taken));
-                writer.write(&tile.to_string().repeat(taken));
+                let mut output = String::from(&"☐".repeat(length - taken));
+                output.push_str(&tile.to_string().repeat(taken));
+                writer.write(&format!("{: >5}", output));
             },
         }
     }

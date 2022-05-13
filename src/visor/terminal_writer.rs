@@ -28,7 +28,8 @@ impl<'a> TerminalBackend for RootedRenderer<'a> {
     }
 
     fn set_cursor_to(&mut self, coords: Coords) {
-        self.writer.set_cursor_to(self.root + coords);
+        let new_coords = self.root + coords;
+        self.writer.set_cursor_to(new_coords);
     }
 
     fn write(&mut self, text: &str) {
@@ -39,10 +40,6 @@ impl<'a> TerminalBackend for RootedRenderer<'a> {
         self.writer.set_cursor_to(self.root);
     }
 
-    fn move_root(&mut self, by: Coords) {
-        self.root = self.root + by;
-    }
-
     fn flush(&mut self) {
         self.writer.flush();
     }
@@ -50,6 +47,7 @@ impl<'a> TerminalBackend for RootedRenderer<'a> {
     fn get_root(&self) -> Coords {
         self.root
     }
+
 }
 
 pub trait TerminalBackend {
@@ -57,7 +55,6 @@ pub trait TerminalBackend {
     fn set_cursor_to(&mut self, coords: Coords);
     fn write(&mut self, text: &str);
     fn reset_cursor(&mut self);
-    fn move_root(&mut self, by: Coords);
     fn flush(&mut self);
     fn get_root(&self) -> Coords;
 }
@@ -108,10 +105,6 @@ impl TerminalBackend for TermionBackend {
         self.set_cursor_to(self.root);
     }
 
-    fn move_root(&mut self, by: Coords) {
-        self.root = self.root + by;
-    }
-
     fn get_root(&self) -> Coords {
         self.root
     }
@@ -140,6 +133,9 @@ impl TerminalBackend for TestBackend {
     }
 
     fn set_cursor_to(&mut self, coords: Coords) {
+        if coords == Coords(5,5) {
+            panic!();
+        }
         self.cursor = coords;
     }
 
@@ -172,10 +168,6 @@ impl TerminalBackend for TestBackend {
 
     fn reset_cursor(&mut self) {
         self.cursor = self.root;
-    }
-
-    fn move_root(&mut self, by: Coords) {
-        self.root = self.root + by;
     }
 
     fn flush(&mut self) {}

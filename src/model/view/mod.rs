@@ -10,6 +10,7 @@ use std::{cell::RefCell, rc::Rc};
 
 pub mod player;
 
+#[derive(Debug)]
 pub struct TileView {
     pub tile: Tile,
     pub selected: bool,
@@ -167,7 +168,7 @@ impl Component for FactoryAreaView {
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {
-        (6, 4)
+        (6, 8)
     }
 }
 
@@ -196,12 +197,13 @@ impl<const N: usize> Component for GameView<N> {
             state: factory_state,
             factories,
         };
-        //factory_area.render(writer);
         let player_area = PlayerAreaView::new(game.get_players());
-        //player_area.render(writer);
 
-        let layout = Layout::vertical(1, vec![Box::new(player_area), Box::new(factory_area)]);
-        layout.render(writer);
+        let gameview = PanelBuilder::default()
+            .component(Box::new(Layout::vertical(1, vec![Box::new(player_area), Box::new(factory_area)])))
+            .build()
+            .unwrap();
+        gameview.render(writer);
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {

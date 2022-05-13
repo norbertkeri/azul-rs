@@ -1,5 +1,6 @@
 use crate::visor::{terminal_writer::RootedRenderer, Coords};
 use derive_builder::Builder;
+use std::fmt::Debug;
 
 use super::{terminal_writer::TerminalBackend, Component};
 
@@ -36,8 +37,7 @@ impl Component for TextView {
         while let Some(line) = iter.next() {
             writer.write(line);
             if iter.peek().is_some() {
-                writer.move_root((0, 1).into());
-                writer.reset_cursor();
+                writer.set_cursor_to((0, 1).into());
             }
         }
     }
@@ -118,23 +118,26 @@ impl Component for Panel<'_> {
 
         for i in 1..=vertical_padding {
             writer.reset_cursor();
-            writer.set_cursor_to(Coords(1, 1 + i));
+            writer.set_cursor_to(Coords(0, i));
             writer.write("│");
-            writer.set_cursor_to(Coords(w, 1 + i));
+            writer.set_cursor_to(Coords(w-1, i));
             writer.write("│");
         }
 
-        let subroot = writer.get_root() + Coords(1 + horizontal_padding, 1 + vertical_padding);
+        let subroot = Coords(1 + horizontal_padding, 1 + vertical_padding);
         let mut rooted = RootedRenderer::new(writer, subroot);
         rooted.reset_cursor();
         self.component.render(&mut rooted);
-        for i in (2 + vertical_padding)..=(h - 1) {
-            writer.set_cursor_to(Coords(1, i));
+        writer.reset_cursor();
+        for i in (1 + vertical_padding)..=(h - 2) {
+            let beginning = Coords(0, i);
+            writer.set_cursor_to(beginning);
             writer.write("│");
-            writer.set_cursor_to(Coords(w, i));
+            let end = Coords(w-1, i);
+            writer.set_cursor_to(end);
             writer.write("│");
         }
-        writer.set_cursor_to(Coords(1, h));
+        writer.set_cursor_to(Coords(0, h-1));
         writer.write("└");
         writer.write(&"─".repeat((w - 2).into()));
         writer.write("┘");

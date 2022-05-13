@@ -1,4 +1,6 @@
-use furnace::visor::{layout::Layout, view::TextView, Component};
+use std::hash::BuildHasher;
+
+use furnace::visor::{layout::Layout, view::{TextView, PanelBuilder}, Component};
 
 fn assert_dimensions(component: &dyn Component, expected: (u16, u16)) {
     let dimensions = component.declare_dimensions();
@@ -55,4 +57,15 @@ fn test_layout_dimensions_vertical_linebreak() {
 
     let layout = Layout::vertical(0, stuff);
     assert_dimensions(&layout, (9, 3));
+}
+
+#[test]
+fn test_panel_with_border_dimensions() {
+    let hello = TextView::new(String::from("Hello"));
+    let panel = PanelBuilder::default()
+        .component(Box::new(hello))
+        .build()
+        .unwrap();
+
+    assert_dimensions(&panel, (7, 3));
 }

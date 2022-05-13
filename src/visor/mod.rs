@@ -4,9 +4,10 @@ pub mod layout;
 pub mod terminal_writer;
 pub mod view;
 
-use self::terminal_writer::{DebuggableTerminalBackend, TerminalBackend};
+use self::terminal_writer::{DebuggableTerminalBackend, TerminalBackend, RootedRenderer};
 use crate::model::AppEvent;
 use std::ops::Add;
+use std::fmt::Debug;
 
 pub trait Component {
     fn render(&self, writer: &mut dyn TerminalBackend);
@@ -16,7 +17,7 @@ pub trait Component {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Coords(u16, u16);
 
 impl From<(u16, u16)> for Coords {
@@ -81,7 +82,8 @@ where
 
     pub fn render(&mut self) {
         self.writer.clear();
-        self.root_component.render(&mut self.writer);
+        let mut writer = RootedRenderer::new(&mut self.writer, Coords(1, 1));
+        self.root_component.render(&mut writer);
         self.writer.flush();
 
         //sink.flush().unwrap(); // TODO

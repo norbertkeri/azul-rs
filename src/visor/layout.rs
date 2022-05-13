@@ -2,7 +2,7 @@ use std::cmp::max;
 
 use super::{
     terminal_writer::{RootedRenderer, TerminalBackend},
-    Component, UserEventHandled,
+    Component, UserEventHandled, Coords,
 };
 
 pub type Components<'a> = Vec<Box<dyn Component + 'a>>;
@@ -52,17 +52,19 @@ pub enum Direction {
 
 impl<'a> Component for Layout<'a> {
     fn render(&self, writer: &mut dyn TerminalBackend) {
+        let mut dims = Coords(0, 0);
         for component in self.components.iter() {
             writer.reset_cursor();
-            let subroot = writer.get_root();
-            let mut rooted = RootedRenderer::new(writer, subroot);
+            let mut rooted = RootedRenderer::new(writer, dims);
+            rooted.reset_cursor();
             component.render(&mut rooted);
             let dimensions = component.declare_dimensions();
             let move_root_by = match self.direction {
                 Direction::Horizontal => (dimensions.0, 0).into(),
                 Direction::Vertical => (0, dimensions.1).into(),
             };
-            writer.move_root(move_root_by);
+            dims = move_root_by;
+            writer.set_cursor_to(move_root_by);
         }
     }
 

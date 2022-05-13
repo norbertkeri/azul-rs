@@ -45,8 +45,8 @@ fn test_factoryview_selected() {
 }
 
 
-#[test_case("☐☐YY", PatternLine::new_taken(Tile::Yellow, 4, 2); "can render a taken patternline")]
-#[test_case("☐☐", PatternLine::new_free(2); "can render a free patternline")]
+#[test_case(" ☐☐YY", PatternLine::new_taken(Tile::Yellow, 4, 2); "can render a taken patternline")]
+#[test_case("   ☐☐", PatternLine::new_free(2); "can render a free patternline")]
 fn test_patternline_rendering(expected: &str, patternline: furnace::model::patternline::PatternLine) {
     let view = furnace::model::patternline::PatternLineView::new(&patternline);
     expect_component(view, expected);

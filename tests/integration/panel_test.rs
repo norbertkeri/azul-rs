@@ -1,4 +1,4 @@
-use furnace::visor::view::{PanelBuilder, TextView};
+use furnace::visor::{view::{PanelBuilder, TextView}, layout::Layout};
 
 use crate::helpers::expect_component;
 
@@ -83,6 +83,74 @@ fn test_panel_with_name_even() {
 ┌──| xx |───┐
 │Hello world│
 └───────────┘"#
+        .trim_start();
+    expect_component(panel, expected);
+}
+
+#[test]
+fn test_two_panels_horizontally() {
+    let hellos = ["Hello", "Hello"].into_iter().map(|s| {
+        let panel = PanelBuilder::default()
+        .component(Box::new(TextView::new(String::from(s))) as Box<_>)
+        .build()
+        .unwrap();
+        Box::new(panel) as Box<_>
+    }).collect();
+    let panel = PanelBuilder::default()
+        .component(Box::new(Layout::horizontal(0, hellos)))
+        .build()
+        .unwrap();
+    let expected = r#"
+┌──────────────┐
+│┌─────┐┌─────┐│
+││Hello││Hello││
+│└─────┘└─────┘│
+└──────────────┘"#
+        .trim_start();
+    expect_component(panel, expected);
+}
+
+#[test]
+fn test_panel_in_layout_in_panel() {
+    let hellos = ["Hello"].into_iter().map(|s| {
+        let panel = PanelBuilder::default()
+        .component(Box::new(TextView::new(String::from(s))) as Box<_>)
+        .build()
+        .unwrap();
+        Box::new(panel) as Box<_>
+    }).collect();
+    let panel = PanelBuilder::default()
+        .component(Box::new(Layout::horizontal(0, hellos)))
+        .build()
+        .unwrap();
+    let expected = r#"
+┌───────┐
+│┌─────┐│
+││Hello││
+│└─────┘│
+└───────┘"#
+        .trim_start();
+    expect_component(panel, expected);
+}
+
+#[test]
+fn test_panel_in_panel() {
+    let hello = PanelBuilder::default()
+        .component(Box::new(TextView::new(String::from("Hello"))) as Box<_>)
+        .name("i")
+        .build()
+        .unwrap();
+
+    let panel = PanelBuilder::default()
+        .component(Box::new(hello))
+        .build()
+        .unwrap();
+    let expected = r#"
+┌───────┐
+│┌| i |┐│
+││Hello││
+│└─────┘│
+└───────┘"#
         .trim_start();
     expect_component(panel, expected);
 }

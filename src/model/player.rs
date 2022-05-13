@@ -1,6 +1,6 @@
 use std::usize;
 
-use crate::visor::Component;
+use crate::visor::{Component, Coords};
 
 use super::patternline::{PatternLine, PatternLineView};
 
@@ -65,8 +65,10 @@ impl<'a> BuildingAreaView<'a> {
 
 impl<'a> Component for BuildingAreaView<'a> {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
-        for pl in self.buildingarea.get_rows() {
+        for (i, pl) in self.buildingarea.get_rows().iter().enumerate() {
             PatternLineView::new(pl).render(writer);
+            let next = (i+1) as u16;
+            writer.set_cursor_to((0, next).into());
         }
     }
 
