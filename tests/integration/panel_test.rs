@@ -154,3 +154,14 @@ fn test_panel_in_panel() {
         .trim_start();
     expect_component(panel, expected);
 }
+
+#[test]
+fn test_vertical_layout_linebreaks() {
+    let hellos: [Box<_>; 3] = ["Hello", "world", "again"].map(|s| Box::new(TextView::from(s)) as Box<_>);
+    let panel = Layout::vertical(0, Vec::from(hellos));
+    let expected = r#"Hello
+world
+again"#;
+
+    expect_component(panel, expected);
+}

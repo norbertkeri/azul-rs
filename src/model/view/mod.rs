@@ -71,7 +71,6 @@ impl<'a> FactoryView<'a> {
             (Some(tiles), Some(selected_tile)) => tiles.contains(&selected_tile),
             _ => false
         }
-        //matches!(self.selected_tile, Some(tile) if self.factory.0.contains(&tile))
     }
 }
 
@@ -111,13 +110,14 @@ impl Component for FactoryView<'_> {
                 }
             }
         }
+        writer.write("\n");
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {
         if self.has_selected_tile() {
-            return (6, 1);
+            return (8, 1);
         }
-        (4, 1)
+        (5, 1)
     }
 
     fn handle(&mut self, _event: &UserInput) -> UserEventHandled {

@@ -59,11 +59,11 @@ impl<'a> Component for Layout<'a> {
             rooted.reset_cursor();
             component.render(&mut rooted);
             let dimensions = component.declare_dimensions();
-            let move_root_by = match self.direction {
+            let move_root_by: Coords = match self.direction {
                 Direction::Horizontal => (dimensions.0, 0).into(),
                 Direction::Vertical => (0, dimensions.1).into(),
             };
-            dims = move_root_by;
+            dims = dims + move_root_by;
             writer.set_cursor_to(move_root_by);
         }
     }
