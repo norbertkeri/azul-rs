@@ -1,4 +1,4 @@
-use super::Tile;
+use super::{Factory, Tile, TILE_PER_FACTORY};
 use rand::{prelude::SliceRandom, thread_rng};
 use std::cmp::min;
 
@@ -13,17 +13,37 @@ impl Bag {
         Self { tiles, discards }
     }
 
-    pub fn draw(&mut self, how_many: usize) -> Vec<Tile> {
+    fn draw(&mut self, how_many: usize) -> Vec<Tile> {
         let can_draw = min(self.tiles.len(), how_many);
-        let drawn = self.tiles.drain(0..can_draw).collect();
+        let drawn: Vec<_> = self.tiles.drain(0..can_draw).collect();
         drawn
     }
 
-    pub fn reshuffle(&mut self) {
+    pub fn fill_factory(&mut self, factory: &mut Factory) {
+        let new_tiles = match factory.0 {
+            Some(_) => panic!("You tried filling a non-empty factory"),
+            None => {
+                let mut some_tiles = self.draw(TILE_PER_FACTORY);
+                if some_tiles.len() == TILE_PER_FACTORY {
+                    some_tiles
+                } else {
+                    self.reshuffle();
+                    let mut rest = self.draw(TILE_PER_FACTORY - some_tiles.len());
+                    rest.append(&mut some_tiles);
+                    rest
+                }
+            }
+        };
+        assert!(new_tiles.len() == TILE_PER_FACTORY);
+        factory.0 = Some(new_tiles.try_into().unwrap());
+    }
+
+    fn reshuffle(&mut self) {
         self.tiles = self.discards.drain(..).collect();
         self.tiles.shuffle(&mut thread_rng());
     }
 
+    // restrict visibility on this to some kind of pub(in mod::struct)?
     pub fn discard(&mut self, tiles: &[Tile]) {
         self.discards.extend(tiles);
     }
@@ -42,20 +62,5 @@ impl Default for Bag {
             tiles,
             discards: vec![],
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::model::{bag::Bag, Tile};
-
-    #[test]
-    pub fn test_drawing_after_reshuffling() {
-        let mut bag = Bag::new(vec![Tile::Yellow, Tile::Red], vec![Tile::Blue]);
-        let drawn = bag.draw(3);
-        assert_eq!(drawn.len(), 2);
-        bag.discard(&drawn);
-        bag.reshuffle();
-        assert_eq!(bag.draw(3).len(), 3);
     }
 }

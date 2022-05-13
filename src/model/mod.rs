@@ -9,6 +9,7 @@ use std::{
     str::FromStr,
 };
 
+use self::bag::Bag;
 use self::patternline::PatternLine;
 
 pub mod bag;
@@ -216,12 +217,19 @@ impl<'a> Component for CommonAreaView<'a> {
     }
 }
 
-pub struct Factory(Option<[Tile; 4]>);
+pub const TILE_PER_FACTORY: usize = 4;
+pub struct Factory(Option<[Tile; TILE_PER_FACTORY]>);
 
 impl Factory {
     pub fn new(mut tiles: [Tile; 4]) -> Self {
         tiles.sort();
         Self(Some(tiles))
+    }
+
+    pub fn new_from_bag(bag: &mut Bag) -> Self {
+        let mut factory = Self::new_empty();
+        bag.fill_factory(&mut factory);
+        factory
     }
 
     pub fn new_empty() -> Self {
@@ -308,18 +316,6 @@ impl Factory {
     }
 }
 
-impl Factory {
-    pub fn new_random() -> Self {
-        let tiles: [Tile; 4] = [
-            rand::random(),
-            rand::random(),
-            rand::random(),
-            rand::random(),
-        ];
-        Self::new(tiles)
-    }
-}
-
 pub enum Direction {
     Next,
     Prev,
@@ -329,7 +325,8 @@ pub struct Game<const N: usize> {
     players: [Player; N],
     factories: [Factory; 4],
     state: GameState,
-    pub common_area: CommonArea,
+    bag: Bag,
+    pub(crate) common_area: CommonArea,
 }
 
 impl<const N: usize> Game<N> {
@@ -350,7 +347,9 @@ impl<const N: usize> Game<N> {
     }
 
     pub fn for_players(players: [Player; N]) -> Self {
-        let factories = Self::generate_factories();
+        let mut bag = Bag::default();
+        let factories = [0, 1, 2, 3].map(|_| Factory::new_from_bag(&mut bag));
+
         Game {
             players,
             factories,
@@ -358,16 +357,13 @@ impl<const N: usize> Game<N> {
                 player_id: 0,
                 current_factory: 0,
             },
+            bag,
             common_area: CommonArea::default(),
         }
     }
 
     pub fn get_factories(&self) -> &[Factory] {
         &self.factories
-    }
-
-    fn generate_factories() -> [Factory; 4] {
-        [0, 1, 2, 3].map(|_| Factory::new_random())
     }
 
     fn find_adjacent_selectable_row(

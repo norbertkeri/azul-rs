@@ -28,7 +28,6 @@ fn main() {
 
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
-    //let mut stdout = stdout();
     write!(stdout, "{}", termion::cursor::Hide).unwrap();
 
     engine.render();

@@ -1,6 +1,7 @@
 use azulrs::visor::{layout::Layout, view::TextView};
 use helpers::{expect_component, to_textviews};
 
+mod bag_test;
 mod factory_test;
 mod helpers;
 mod layout_test;
