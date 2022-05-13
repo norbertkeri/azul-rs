@@ -3,6 +3,15 @@
 version = 3
 
 [[package]]
+name = "ansi_term"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15,9 +24,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "ctor"
+version = "0.1.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ccc0a48a9b826acdf4028595adc9db92caea352f7af011a3034acd172a52a0aa"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "diff"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e25ea47919b1560c4e3b7fe0aaab9becf5b84a10325ddf7db0f0ba5e1026499"
+
+[[package]]
 name = "furnace"
 version = "0.1.0"
 dependencies = [
+ "pretty_assertions",
  "rand",
  "termion",
 ]
@@ -46,10 +72,49 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8f8bdf33df195859076e54ab11ee78a1b208382d3a26ec40d142ffc1ecc49ef"
 
 [[package]]
+name = "output_vt100"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53cdc5b785b7a58c5aad8216b3dfa114df64b0b06ae6e1501cef91df2fbdf8f9"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed0cfbc8191465bed66e1718596ee0b0b35d5ee1f41c5df2189d0fe8bde535ba"
+
+[[package]]
+name = "pretty_assertions"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec0cfe1b2403f172ba0f234e500906ee0a3e493fb81092dac23ebefe129301cc"
+dependencies = [
+ "ansi_term",
+ "ctor",
+ "diff",
+ "output_vt100",
+]
+
+[[package]]
+name = "proc-macro2"
+version = "1.0.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb37d2df5df740e582f28f8560cf425f52bb267d872fe58358eadb554909f07a"
+dependencies = [
+ "unicode-xid",
+]
+
+[[package]]
+name = "quote"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38bc8cc6a5f2e3655e0899c1b848643b2562f853f114bfec7be120678e3ace05"
+dependencies = [
+ "proc-macro2",
+]
 
 [[package]]
 name = "rand"
@@ -110,6 +175,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "syn"
+version = "1.0.82"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8daf5dd0bb60cbd4137b1b587d2fc0ae729bc07cf01cd70b36a1ed5ade3b9d59"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-xid",
+]
+
+[[package]]
 name = "termion"
 version = "1.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -122,7 +198,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "unicode-xid"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
+
+[[package]]
 name = "wasi"
 version = "0.10.2+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
+
+[[package]]
+name = "winapi"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
+dependencies = [
+ "winapi-i686-pc-windows-gnu",
+ "winapi-x86_64-pc-windows-gnu",
+]
+
+[[package]]
+name = "winapi-i686-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
+
+[[package]]
+name = "winapi-x86_64-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"

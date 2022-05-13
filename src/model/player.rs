@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::visor::Component;
+use crate::visor::{terminal_writer::TerminalBackend, Component};
 
 use super::{Card, Resources};
 
@@ -43,11 +43,11 @@ impl PlayerView {
 }
 
 impl Component for PlayerView {
-    fn render(&self) -> String {
-        format!(
+    fn render(&self, writer: &mut dyn TerminalBackend) {
+        writer.write(&format!(
             "Player area for {}\nBut could be for anyone",
             self.player.borrow().get_name()
-        )
+        ));
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {

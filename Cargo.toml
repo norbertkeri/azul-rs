@@ -9,5 +9,9 @@ edition = "2021"
 rand = "*"
 termion = "*"
 
+[dev-dependencies]
+pretty_assertions = "*"
+
+
 [lib]
 doctest = false

@@ -1,89 +1,141 @@
 use std::io::Write;
 
-use super::{Coords, Engine};
+use super::Coords;
 
-pub trait TerminalBackend {
-    fn clear(&mut self, sink: &mut impl Write);
-    fn move_cursor(&mut self, coords: Coords, sink: &mut impl Write);
-    fn write(&mut self, text: &str, sink: &mut impl Write);
+pub struct RootedRenderer<'a> {
+    writer: &'a mut dyn TerminalBackend,
+    root: Coords,
 }
 
-#[derive(Default)]
-pub struct TermionBackend {}
+impl<'a> RootedRenderer<'a> {
+    pub fn new(writer: &'a mut dyn TerminalBackend, root: Coords) -> Self {
+        Self { writer, root }
+    }
+}
+
+impl<'a> TerminalBackend for RootedRenderer<'a> {
+    fn clear(&mut self) {
+        panic!("You are not supposed to call clear");
+    }
+
+    fn set_cursor_to(&mut self, _coords: Coords) {
+        panic!("You are not supposed to call set_cursor_to");
+    }
+
+    fn write(&mut self, text: &str) {
+        self.writer.write(text);
+    }
+
+    fn reset_cursor(&mut self) {
+        self.writer.set_cursor_to(self.root);
+    }
+
+    fn move_root(&mut self, by: Coords) {
+        self.root = self.root + by;
+    }
+
+    fn flush(&mut self) {
+        self.writer.flush();
+    }
+
+    fn get_root(&self) -> Coords {
+        self.root
+    }
+}
+
+pub trait TerminalBackend {
+    fn clear(&mut self);
+    fn set_cursor_to(&mut self, coords: Coords);
+    fn write(&mut self, text: &str);
+    fn reset_cursor(&mut self);
+    fn move_root(&mut self, by: Coords);
+    fn flush(&mut self);
+    fn get_root(&self) -> Coords;
+}
+
+pub trait DebuggableTerminalBackend: TerminalBackend {
+    fn get_contents(&self) -> String;
+}
+
+pub struct TermionBackend {
+    sink: Box<dyn Write>,
+    root: Coords,
+}
+
+impl TermionBackend {
+    pub fn new(sink: Box<dyn Write>) -> Self {
+        Self {
+            sink,
+            root: Default::default(),
+        }
+    }
+}
 
 impl TerminalBackend for TermionBackend {
-    fn clear(&mut self, stdout: &mut impl Write) {
+    fn flush(&mut self) {
+        self.sink.flush().unwrap();
+    }
+
+    fn clear(&mut self) {
         write!(
-            stdout,
+            self.sink,
             "{}{}",
             termion::clear::All,
             termion::cursor::Goto(1, 1),
         )
         .unwrap();
+        self.root = Default::default();
     }
 
-    fn move_cursor(&mut self, coords: Coords, sink: &mut impl Write) {
-        write!(sink, "{}", termion::cursor::Goto(coords.0, coords.1)).unwrap();
+    fn set_cursor_to(&mut self, coords: Coords) {
+        write!(self.sink, "{}", termion::cursor::Goto(coords.0, coords.1)).unwrap();
     }
 
-    fn write(&mut self, text: &str, sink: &mut impl Write) {
-        write!(sink, "{}", text).unwrap();
-    }
-}
-
-pub struct TerminalWriter<T: TerminalBackend> {
-    backend: T,
-}
-
-impl<T: TerminalBackend> TerminalWriter<T> {
-    pub fn new(backend: T) -> Self {
-        Self { backend }
+    fn write(&mut self, text: &str) {
+        write!(self.sink, "{}", text).unwrap();
     }
 
-    pub fn move_to(&mut self, coords: Coords, sink: &mut impl Write) {
-        self.backend.move_cursor(coords, sink);
+    fn reset_cursor(&mut self) {
+        self.set_cursor_to(self.root);
     }
 
-    pub fn with_backend(backend: T) -> Self {
-        Self { backend }
+    fn move_root(&mut self, by: Coords) {
+        self.root = self.root + by;
     }
 
-    pub fn clear(&mut self, sink: &mut impl Write) {
-        self.backend.clear(sink);
-        self.backend.move_cursor(Coords(1, 1), sink);
-    }
-
-    pub fn write(&mut self, text: &str, sink: &mut impl Write) {
-        self.backend.write(text, sink);
+    fn get_root(&self) -> Coords {
+        self.root
     }
 }
 
 pub struct TestBackend {
-    cursor: (usize, usize),
+    cursor: Coords,
     screen: Vec<String>,
+    root: Coords,
 }
 
 impl Default for TestBackend {
     fn default() -> Self {
         Self {
-            cursor: (1, 1),
+            cursor: (1, 1).into(),
             screen: Default::default(),
+            root: (1, 1).into(),
         }
     }
 }
 
 impl TerminalBackend for TestBackend {
-    fn clear(&mut self, _sink: &mut impl std::io::Write) {
+    fn clear(&mut self) {
         self.screen = vec![];
-        self.cursor = (1, 1);
+        self.cursor = (1, 1).into();
     }
 
-    fn move_cursor(&mut self, coords: Coords, _sink: &mut impl std::io::Write) {
-        self.cursor = coords.into();
+    fn set_cursor_to(&mut self, coords: Coords) {
+        self.cursor = coords;
     }
 
-    fn write(&mut self, text: &str, _sink: &mut impl std::io::Write) {
-        let (x, y) = self.cursor;
+    fn write(&mut self, text: &str) {
+        let (x, y): (usize, usize) = (self.cursor.0.into(), self.cursor.1.into());
         for i in 0..=y {
             if self.screen.get(i).is_none() {
                 self.screen.push(String::new());
@@ -100,20 +152,32 @@ impl TerminalBackend for TestBackend {
 
                 new_string.replace_range(replace_at, text);
                 self.screen[i] = new_string.trim_end().to_string();
-                self.cursor = (x + text.chars().count(), y);
+                let casted: (u16, u16) = (
+                    (x + text.chars().count()).try_into().unwrap(),
+                    y.try_into().unwrap(),
+                );
+                self.cursor = casted.into();
             }
         }
     }
-}
 
-impl TerminalWriter<TestBackend> {
-    pub fn get_contents(&self) -> String {
-        self.backend.screen.join("\n").trim_end().to_string()
+    fn reset_cursor(&mut self) {
+        self.cursor = self.root;
+    }
+
+    fn move_root(&mut self, by: Coords) {
+        self.root = self.root + by;
+    }
+
+    fn flush(&mut self) {}
+
+    fn get_root(&self) -> Coords {
+        self.root
     }
 }
 
-impl<'a> Engine<'a, TestBackend> {
-    pub fn get_contents(&self) -> String {
-        self.writer.get_contents()
+impl DebuggableTerminalBackend for TestBackend {
+    fn get_contents(&self) -> String {
+        self.screen.join("\n").trim_end().to_string()
     }
 }

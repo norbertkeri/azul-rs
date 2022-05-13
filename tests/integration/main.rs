@@ -1,29 +1,55 @@
-use std::io::stdout;
-
 use furnace::visor::{
-    terminal_writer::{TerminalWriter, TestBackend},
-    view::TextView,
-    Engine,
+    layout::Layout, view::TextView,
 };
+use helpers::{expect_component, to_textviews};
 
-mod testview;
+mod layout_test;
+mod panel_test;
+mod helpers;
+
+fn testdata(data: &str) -> &str {
+    data.trim_start()
+}
 
 #[test]
-fn test_me() {
-    let hello = TextView::new(String::from("Hello"));
-    let world = TextView::new(String::from("world"));
-    let backend = TestBackend::default();
-    let writer = TerminalWriter::new(backend);
-    let mut engine = Engine::new(
-        writer,
-        vec![Box::new(hello) as Box<_>, Box::new(world) as Box<_>],
+fn test_textview() {
+    let hello = TextView::from("Hello");
+    expect_component(hello, "Hello");
+}
+
+#[test]
+fn test_horizontal_layout_nolbrk() {
+    let stuff = to_textviews(["Hello", "World"]);
+
+    let layout = Layout::horizontal(0, stuff);
+    expect_component(layout, "HelloWorld");
+}
+
+#[test]
+fn test_horizontal_layout_with_lbrk() {
+    let components = to_textviews(["Second\ntext is very long", "Bye World"]);
+
+    let layout = Layout::horizontal(0, components);
+    let expected = testdata(
+        "
+Second           Bye World
+text is very long",
     );
 
-    let mut stdout = stdout();
+    expect_component(layout, expected);
+}
 
-    engine.render(&mut stdout);
+#[test]
+fn test_vertical_layout_with_lbrk() {
+    let components = to_textviews(["Second\ntext is very long", "Bye World"]);
 
-    let result = engine.get_contents();
+    let layout = Layout::vertical(0, components);
+    let expected = testdata(
+        r#"
+Second
+text is very long
+Bye World"#,
+    );
 
-    assert_eq!(result, "Helloworld");
+    expect_component(layout, expected);
 }

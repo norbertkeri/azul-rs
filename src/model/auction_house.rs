@@ -1,6 +1,6 @@
 use crate::{
     model::{AppEvent, AuctionHouse},
-    visor::{Component, UserEventHandled, UserInput},
+    visor::{terminal_writer::TerminalBackend, Component, UserEventHandled, UserInput},
 };
 use std::{cell::RefCell, rc::Rc};
 
@@ -15,11 +15,11 @@ impl<'a> AuctionHouseView {
 }
 
 impl<'a> Component for AuctionHouseView {
-    fn render(&self) -> String {
-        format!(
+    fn render(&self, writer: &mut dyn TerminalBackend) {
+        writer.write(&format!(
             "There is {} cards in the AH",
             &self.house.borrow().num_of_cards()
-        )
+        ))
     }
 
     fn handle(&mut self, event: &UserInput) -> UserEventHandled {

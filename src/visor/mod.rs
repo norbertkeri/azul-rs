@@ -4,36 +4,29 @@ pub mod layout;
 pub mod terminal_writer;
 pub mod view;
 
-use self::terminal_writer::{TerminalBackend, TerminalWriter};
+use self::terminal_writer::{DebuggableTerminalBackend, TerminalBackend};
 use crate::model::AppEvent;
 use std::ops::Add;
 
-pub trait Renderable {
-    fn render(&self);
-}
-
 pub trait Component {
-    fn render(&self) -> String;
+    fn render(&self, writer: &mut dyn TerminalBackend);
     fn declare_dimensions(&self) -> (u16, u16);
     fn handle(&mut self, _event: &UserInput) -> UserEventHandled {
         UserEventHandled::Noop
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Coords(u16, u16);
 
-impl From<Coords> for (usize, usize) {
-    fn from(c: Coords) -> Self {
-        (c.0.into(), c.1.into())
+impl From<(u16, u16)> for Coords {
+    fn from(a: (u16, u16)) -> Self {
+        Self(a.0, a.1)
     }
 }
 
-impl From<(u16, u16)> for Coords {
-    fn from(what: (u16, u16)) -> Self {
-        Coords(what.0, what.1)
-    }
-}
+#[derive(Copy, Clone, Debug)]
+pub struct Move(i16, i16);
 
 impl Default for Coords {
     fn default() -> Self {
@@ -49,9 +42,9 @@ impl Add for Coords {
     }
 }
 
-pub struct Engine<'a, TerminalWriterBackend: TerminalBackend> {
-    writer: TerminalWriter<TerminalWriterBackend>,
-    components: Vec<Box<dyn Component + 'a>>,
+pub struct Engine<T> {
+    writer: T,
+    root_component: Box<dyn Component>,
 }
 
 pub enum UserEventHandled {
@@ -67,31 +60,41 @@ pub enum UserInput {
     Back,
 }
 
-impl<'a, TerminalWriterBackend: TerminalBackend> Engine<'a, TerminalWriterBackend> {
-    pub fn with_writer(writer: TerminalWriter<TerminalWriterBackend>) -> Self {
-        Self::new(writer, Default::default())
+impl<T> Engine<T>
+where
+    T: DebuggableTerminalBackend,
+{
+    pub fn get_contents(&self) -> String {
+        self.writer.get_contents()
+    }
+}
+
+impl<T> Engine<T>
+where
+    T: TerminalBackend,
+{
+    pub fn new(writer: T, root_component: Box<dyn Component>) -> Self {
+        Self {
+            writer,
+            root_component,
+        }
     }
 
-    pub fn new(
-        writer: TerminalWriter<TerminalWriterBackend>,
-        components: Vec<Box<dyn Component + 'a>>,
-    ) -> Self {
-        Self { writer, components }
-    }
-
-    pub fn render(&mut self, sink: &mut impl std::io::Write) {
+    pub fn render(&mut self) {
         /*
         ┌─┐
         │ │
         └─┘
             */
 
-        self.writer.clear(sink);
-        for component in self.components.iter() {
-            for line in component.render().lines() {
-                self.writer.write(line, sink);
-            }
+        self.writer.clear();
+        self.root_component.render(&mut self.writer);
+        self.writer.flush();
+        /*
+        for line in self.root_component.render().lines() {
+            self.writer.write(line);
         }
+        */
         /*
         for (i, component) in self.components.iter().enumerate() {
             let (width, height) = component.declare_dimensions();
@@ -129,23 +132,17 @@ impl<'a, TerminalWriterBackend: TerminalBackend> Engine<'a, TerminalWriterBacken
         }
         */
 
-        sink.flush().unwrap();
+        //sink.flush().unwrap(); // TODO
     }
 
     pub fn trigger(&mut self, event: UserInput) -> Option<AppEvent> {
-        for c in self.components.iter_mut() {
-            match c.handle(&event) {
-                UserEventHandled::ViewChange | UserEventHandled::Noop => {}
-                UserEventHandled::AppEvent(appevent) => {
-                    return Some(appevent);
-                }
+        match self.root_component.handle(&event) {
+            UserEventHandled::ViewChange | UserEventHandled::Noop => {}
+            UserEventHandled::AppEvent(appevent) => {
+                return Some(appevent);
             }
         }
 
         None
-    }
-
-    pub fn add_component(&mut self, component: Box<dyn Component + 'a>) {
-        self.components.push(component);
     }
 }
