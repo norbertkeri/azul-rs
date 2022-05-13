@@ -19,6 +19,8 @@ pub enum AppEvent {
     SelectNext,
     SelectPrev,
     TransitionToPickTileFromFactory { factory_id: usize, tile: Tile },
+    TransitionToPickRow { player_id: usize, factory_id: usize, tile: Tile },
+    PlaceTiles { player_id: usize, factory_id: usize, tile: Tile, row_id: usize }
 }
 
 pub enum Slot {
@@ -101,6 +103,12 @@ impl ToString for Pickable {
 }
 
 pub struct CommonArea(Vec<Pickable>);
+
+impl Default for CommonArea {
+    fn default() -> Self {
+        Self::new(Default::default())
+    }
+}
 
 impl CommonArea {
     pub fn inspect(&self) -> &[Pickable] {
@@ -230,10 +238,16 @@ impl Factory {
     }
 }
 
+pub enum Direction {
+    Next,
+    Prev
+}
+
 pub struct Game<const N: usize> {
     players: [Player; N],
-    factories: [Rc<Factory>; 4],
+    factories: [Factory; 4],
     state: GameState,
+    common_area: CommonArea
 }
 
 impl<const N: usize> Game<N> {
@@ -262,15 +276,44 @@ impl<const N: usize> Game<N> {
                 player_id: 0,
                 current_factory: 0,
             },
+            common_area: CommonArea::default()
         }
     }
 
-    pub fn get_factories(&self) -> &[Rc<Factory>] {
+    pub fn get_factories(&self) -> &[Factory] {
         &self.factories
     }
 
-    fn generate_factories() -> [Rc<Factory>; 4] {
-        [0, 1, 2, 3].map(|_| Rc::new(Factory::new_random()))
+    fn generate_factories() -> [Factory; 4] {
+        [0, 1, 2, 3].map(|_| Factory::new_random())
+    }
+
+    fn find_adjacent_selectable_row(&self, tile: Tile, how_many: usize, player_id: usize, current_row: usize, direction: Direction) -> Option<usize> {
+        let barea = self.get_players()[player_id].get_buildingarea();
+        let rows = barea.get_rows_that_can_accept(tile, how_many);
+        let current_row_index = rows
+            .iter()
+            .position(|(i, _)| i == &current_row)
+            .expect("The row is not here?");
+
+        match (rows.len(), direction) {
+            (count, Direction::Next) if count - 1 == current_row_index => {
+                let (first_index, _) = rows.first().unwrap();
+                Some(*first_index)
+            },
+            (_, Direction::Prev) if current_row_index == 0 => {
+                let (last_index, _) = rows.last().unwrap();
+                Some(*last_index)
+            },
+            (_, Direction::Next) => {
+                rows.get(current_row_index + 1)
+                .map(|(next_index, _)| *next_index)
+            }
+            (_, Direction::Prev) => {
+                rows.get(current_row_index - 1)
+                .map(|(prev_index, _)| *prev_index)
+            }
+        }
     }
 
     pub fn handle(&mut self, e: AppEvent) {
@@ -295,6 +338,14 @@ impl<const N: usize> Game<N> {
                         selected_tile: next_tile,
                     }
                 }
+                GameState::PickRowToPutTiles { player_id, factory_id, tile, selected_row_id } => {
+                    let factory = &self.get_factories()[factory_id];
+                    let count = factory.count_tile(tile);
+                    let selected_row_id = self.find_adjacent_selectable_row(tile, count, player_id, selected_row_id, Direction::Next).unwrap_or(selected_row_id);
+                    GameState::PickRowToPutTiles {
+                        factory_id, player_id, tile, selected_row_id
+                    }
+                }
             },
             AppEvent::SelectPrev => match self.state {
                 GameState::PickFactory {
@@ -316,6 +367,14 @@ impl<const N: usize> Game<N> {
                         selected_tile: next_tile,
                     }
                 }
+                GameState::PickRowToPutTiles { player_id, factory_id, tile, selected_row_id } => {
+                    let factory = &self.get_factories()[factory_id];
+                    let count = factory.count_tile(tile);
+                    let selected_row_id = self.find_adjacent_selectable_row(tile, count, player_id, selected_row_id, Direction::Prev).unwrap_or(selected_row_id);
+                    GameState::PickRowToPutTiles {
+                        factory_id, player_id, tile, selected_row_id
+                    }
+                }
             },
             AppEvent::TransitionToPickTileFromFactory {
                 factory_id: _,
@@ -334,9 +393,35 @@ impl<const N: usize> Game<N> {
                     factory_id: _,
                     selected_tile: _,
                 } => {
-                    todo!()
+                    panic!("Cannot happen");
                 }
+                GameState::PickRowToPutTiles { player_id, factory_id, tile, selected_row_id } => panic!("Cannot happen")
             },
+            AppEvent::TransitionToPickRow { player_id, factory_id, tile } => {
+                let factory = &self.get_factories()[factory_id];
+                let how_many = factory.count_tile(tile);
+                let buildingarea = self.get_players()[player_id].get_buildingarea();
+                let rows = buildingarea.get_rows_that_can_accept(tile, how_many);
+                let first_that_can_fit = rows.first();
+                assert!(first_that_can_fit.is_some());
+                let (selected_row_id, _) = *first_that_can_fit.unwrap();
+                GameState::PickRowToPutTiles {
+                    player_id,
+                    factory_id,
+                    tile,
+                    selected_row_id
+                }
+            }
+            AppEvent::PlaceTiles { player_id, factory_id, tile, row_id } => {
+                let factory = &mut self.factories[factory_id];
+                let buildingarea = self.players[player_id].get_buildingarea_mut();
+                let row = buildingarea.get_row_mut(row_id);
+                factory.pick(tile, &mut self.common_area, row).unwrap();
+                GameState::PickFactory {
+                    player_id: 1 - player_id,
+                    current_factory: 0
+                }
+            }
         };
 
         self.state = new_e;
@@ -353,6 +438,12 @@ pub enum GameState {
         factory_id: usize,
         selected_tile: Tile,
     },
+    PickRowToPutTiles {
+        player_id: usize,
+        factory_id: usize,
+        tile: Tile,
+        selected_row_id: usize
+    }
 }
 
 #[cfg(test)]

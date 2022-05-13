@@ -132,13 +132,13 @@ pub enum FactoryAreaState {
     SelectTile { factory_id: usize, tile: Tile },
 }
 
-struct FactoryAreaView {
-    factories: Vec<Rc<Factory>>,
+struct FactoryAreaView<'a> {
+    factories: &'a [Factory],
     state: FactoryAreaState,
 }
 
-impl<const N: usize> From<&Game<N>> for FactoryAreaView {
-    fn from(game: &Game<N>) -> Self {
+impl<'a, const N: usize> From<&'a Game<N>> for FactoryAreaView<'a> {
+    fn from(game: &'a Game<N>) -> Self {
         let factory_state = match game.state {
             GameState::PickFactory {
                 current_factory, ..
@@ -151,8 +151,14 @@ impl<const N: usize> From<&Game<N>> for FactoryAreaView {
                 factory_id,
                 tile: selected_tile,
             },
+            GameState::PickRowToPutTiles { player_id: _, factory_id, tile, selected_row_id: _ } => {
+                FactoryAreaState::SelectTile {
+                    factory_id,
+                    tile
+                }
+            }
         };
-        let factories: Vec<_> = game.get_factories().to_vec();
+        let factories = game.get_factories();
         Self {
             state: factory_state,
             factories,
@@ -160,7 +166,7 @@ impl<const N: usize> From<&Game<N>> for FactoryAreaView {
     }
 }
 
-impl Component for FactoryAreaView {
+impl Component for FactoryAreaView<'_> {
     fn render(&self, writer: &mut RootedRenderer) {
         let factory_views: Vec<_> = self
             .factories
@@ -176,7 +182,7 @@ impl Component for FactoryAreaView {
                         (false, None)
                     }
                 };
-                let view = FactoryView::new(f.as_ref(), selected_tile, is_selected);
+                let view = FactoryView::new(f, selected_tile, is_selected);
                 Box::new(view) as Box<dyn Component>
             })
             .collect();
@@ -203,7 +209,7 @@ pub struct GameView<const N: usize> {
 impl<const N: usize> Component for GameView<N> {
     fn render(&self, writer: &mut RootedRenderer) {
         let game: &Game<N> = &self.game.as_ref().borrow();
-        let player_area = PlayerAreaView::new(game.get_players());
+        let player_area: PlayerAreaView = game.into();
         let factory_area: FactoryAreaView = game.into();
 
         let gameview = PanelBuilder::default()
@@ -234,6 +240,11 @@ impl<const N: usize> Component for GameView<N> {
                     'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
                     _ => UserEventHandled::Noop,
                 },
+                GameState::PickRowToPutTiles { .. } => match c {
+                    'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
+                    'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
+                    _ => UserEventHandled::Noop,
+                },
             },
             UserInput::Confirm => match game.state {
                 GameState::PickFactory {
@@ -249,7 +260,12 @@ impl<const N: usize> Component for GameView<N> {
                         tile,
                     })
                 }
-                GameState::PickTileFromFactory { .. } => todo!(),
+                GameState::PickTileFromFactory { player_id, factory_id, selected_tile } => {
+                    UserEventHandled::AppEvent(AppEvent::TransitionToPickRow { player_id, tile: selected_tile, factory_id })
+                },
+                GameState::PickRowToPutTiles { player_id, factory_id, tile, selected_row_id } => {
+                    UserEventHandled::AppEvent(AppEvent::PlaceTiles { player_id, factory_id, tile, row_id: selected_row_id })
+                }
             },
             UserInput::Back => UserEventHandled::Noop,
         }

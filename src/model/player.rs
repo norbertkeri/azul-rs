@@ -2,7 +2,7 @@ use std::usize;
 
 use crate::visor::{Component, renderer};
 
-use super::patternline::{PatternLine, PatternLineView};
+use super::{patternline::{PatternLine, PatternLineView}, Tile};
 
 pub struct Player {
     name: String,
@@ -28,6 +28,10 @@ impl Player {
     pub fn get_buildingarea(&self) -> &BuildingArea {
         &self.building_area
     }
+
+    pub fn get_buildingarea_mut(&mut self) -> &mut BuildingArea {
+        &mut self.building_area
+    }
 }
 
 pub struct BuildingArea([PatternLine; 5]);
@@ -41,8 +45,18 @@ impl BuildingArea {
         &self.0[row_number]
     }
 
+    pub fn get_row_mut(&mut self, row_number: usize) -> &mut PatternLine {
+        &mut self.0[row_number]
+    }
+
     pub fn get_rows(&self) -> &[PatternLine] {
         &self.0
+    }
+
+    pub fn get_rows_that_can_accept(&self, tile: Tile, how_many: usize) -> Vec<(usize, &PatternLine)> {
+        self.0.iter().enumerate().filter(move |(_i, p)| {
+            p.can_accept(tile, how_many)
+        }).collect()
     }
 }
 
@@ -54,18 +68,20 @@ impl Default for BuildingArea {
 
 pub struct BuildingAreaView<'a> {
     buildingarea: &'a BuildingArea,
+    selected: Option<usize>
 }
 
 impl<'a> BuildingAreaView<'a> {
-    pub fn new(buildingarea: &'a BuildingArea) -> Self {
-        Self { buildingarea }
+    pub fn new(buildingarea: &'a BuildingArea, selected: Option<usize>) -> Self {
+        Self { buildingarea, selected }
     }
 }
 
 impl<'a> Component for BuildingAreaView<'a> {
     fn render(&self, writer: &mut renderer::RootedRenderer) {
         for (i, pl) in self.buildingarea.get_rows().iter().enumerate() {
-            PatternLineView::new(pl).render(writer);
+            let is_selected = self.selected.map(|x| x == i).unwrap_or(false);
+            PatternLineView::new(pl, is_selected).render(writer);
             let next = (i + 1) as u16;
             writer.set_cursor_to((0, next).into());
         }

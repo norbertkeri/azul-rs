@@ -100,11 +100,12 @@ impl FloorLine {
 #[derive(Debug)]
 pub struct PatternLineView<'a> {
     line: &'a PatternLine,
+    selected: bool
 }
 
 impl<'a> PatternLineView<'a> {
-    pub fn new(line: &'a PatternLine) -> Self {
-        Self { line }
+    pub fn new(line: &'a PatternLine, selected: bool) -> Self {
+        Self { line, selected }
     }
 }
 
@@ -116,9 +117,9 @@ impl<'a> From<PatternLineView<'a>> for Box<dyn Component + 'a> {
 
 impl<'a> Component for PatternLineView<'a> {
     fn render(&self, writer: &mut RootedRenderer) {
-        match *self.line {
+        let mut output = match *self.line {
             PatternLine::Free { length } => {
-                writer.write(&format!("{: >5}", "☐".repeat(length)));
+                format!("{: >5}", "☐".repeat(length))
             }
             PatternLine::Taken {
                 tile,
@@ -127,9 +128,13 @@ impl<'a> Component for PatternLineView<'a> {
             } => {
                 let mut output = String::from(&"☐".repeat(length - taken));
                 output.push_str(&tile.to_string().repeat(taken));
-                writer.write(&format!("{: >5}", output));
+                output
             }
+        };
+        if self.selected {
+            output = format!("-> {}", output);
         }
+        writer.write(&format!("{: >8}", output));
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {
