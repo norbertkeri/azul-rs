@@ -32,23 +32,15 @@ fn main() {
     for c in stdin.keys() {
         stdout.flush().unwrap();
 
-        let e = match c.unwrap() {
-            termion::event::Key::Backspace => engine.trigger(UserInput::Back),
-            termion::event::Key::Char(c) => match c {
-                'q' => {
-                    break;
-                }
-                '\n' => engine.trigger(UserInput::Confirm),
-                direction @ ('j' | 'k') => engine.trigger(UserInput::Character(direction)),
-                _ => None,
-            },
-            _ => None,
+        let input = match c.unwrap() {
+            termion::event::Key::Backspace | termion::event::Key::Esc => UserInput::Back,
+            termion::event::Key::Char(c) => UserInput::from_char(c),
+            _ => UserInput::Noop,
         };
-        if let Some(appevent) = e {
-            let is_over = game.borrow_mut().handle(appevent);
-            if is_over {
-                break;
-            }
+
+        let is_over = game.borrow_mut().handle(input);
+        if is_over {
+            break;
         }
         engine.render();
     }

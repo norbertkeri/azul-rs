@@ -1,4 +1,5 @@
 use crate::visor::view::PanelBuilder;
+use crate::visor::UserInput;
 use crate::{
     model::player::Player,
     visor::{view::TextView, Component},
@@ -425,16 +426,16 @@ impl<const N: usize> Game<N> {
         rows.scroll(current_row, direction)
     }
 
-    pub fn handle(&mut self, e: AppEvent) -> bool {
-        let new_e = match e {
-            AppEvent::Select(dir) => match self.state {
+    pub fn handle(&mut self, input: UserInput) -> bool {
+        let new_state = match input {
+            UserInput::Direction(dir) => match self.state {
                 GameState::PickSource => {
                     let pickable_factories = self.find_pickable_sources();
                     let next_factory_id = pickable_factories
                         .scroll(self.current_source, dir)
                         .unwrap_or(self.current_source);
                     self.current_source = next_factory_id;
-                    GameState::PickSource
+                    Some(GameState::PickSource)
                 }
                 GameState::PickTileFromSource { selected_tile } => {
                     let next_tile = match self.current_source {
@@ -445,9 +446,9 @@ impl<const N: usize> Game<N> {
                             self.common_area.find_adjacent_tile(selected_tile, dir)
                         }
                     };
-                    GameState::PickTileFromSource {
+                    Some(GameState::PickTileFromSource {
                         selected_tile: next_tile,
-                    }
+                    })
                 }
                 GameState::PickRowToPutTiles {
                     tile,
@@ -461,49 +462,78 @@ impl<const N: usize> Game<N> {
                             dir,
                         )
                         .unwrap_or(selected_row_id);
-                    GameState::PickRowToPutTiles {
+                    Some(GameState::PickRowToPutTiles {
                         tile,
                         selected_row_id,
-                    }
+                    })
                 }
             },
-            AppEvent::TransitionToPickTileFromFactory { tile } => match self.state {
-                GameState::PickSource => GameState::PickTileFromSource {
+            UserInput::Confirm => match self.state {
+                GameState::PickSource => {
+                    let source = self.find_source(self.current_source);
+                    let tile = source
+                        .find_first_tile()
+                        .expect("You managed to pick a source that has no tiles?");
+
+                    Some(GameState::PickTileFromSource {
+                        selected_tile: tile,
+                    })
+                }
+                GameState::PickTileFromSource {
                     selected_tile: tile,
-                },
-                GameState::PickTileFromSource { .. } => panic!("Cannot happen"),
-                GameState::PickRowToPutTiles { .. } => panic!("Cannot happen"),
-            },
-            AppEvent::TransitionToPickRow { tile } => {
-                let buildingarea = self.get_players()[self.current_player_id].get_buildingarea();
-                let rows = buildingarea.get_rows_that_can_accept(tile);
-                let first_that_can_fit = rows.first();
-                if first_that_can_fit.is_none() {
-                    todo!("No rows can fit the tiles, all should go to the floorline");
+                } => {
+                    let buildingarea =
+                        self.get_players()[self.current_player_id].get_buildingarea();
+                    let rows = buildingarea.get_rows_that_can_accept(tile);
+                    let first_that_can_fit = rows.first();
+                    if first_that_can_fit.is_none() {
+                        todo!("No rows can fit the tiles, all should go to the floorline");
+                    }
+                    let selected_row_id = *first_that_can_fit.unwrap();
+                    Some(GameState::PickRowToPutTiles {
+                        tile,
+                        selected_row_id,
+                    })
                 }
-                let selected_row_id = *first_that_can_fit.unwrap();
                 GameState::PickRowToPutTiles {
                     tile,
-                    selected_row_id,
-                }
-            }
-            AppEvent::PlaceTiles { tile, row_id } => {
-                self.pick(self.current_source, tile, self.current_player_id, row_id)
-                    .unwrap();
+                    selected_row_id: row_id,
+                } => {
+                    self.pick(self.current_source, tile, self.current_player_id, row_id)
+                        .unwrap();
 
-                let pickable_sources = self.find_pickable_sources();
-                let next_source = pickable_sources.first();
-                if let Some(next_source) = next_source {
-                    self.current_player_id = (N - 1) - self.current_player_id;
-                    self.current_source = *next_source;
-                    GameState::PickSource
-                } else {
-                    self.advance_round()
+                    let pickable_sources = self.find_pickable_sources();
+                    let next_source = pickable_sources.first();
+                    let next = if let Some(next_source) = next_source {
+                        self.current_player_id = (N - 1) - self.current_player_id;
+                        self.current_source = *next_source;
+                        GameState::PickSource
+                    } else {
+                        self.advance_round()
+                    };
+                    Some(next)
                 }
+            },
+            UserInput::Back => match self.state {
+                GameState::PickSource => None,
+                GameState::PickTileFromSource { selected_tile: _ } => Some(GameState::PickSource),
+                GameState::PickRowToPutTiles {
+                    tile,
+                    selected_row_id: _,
+                } => Some(GameState::PickTileFromSource {
+                    selected_tile: tile,
+                }),
+            },
+            UserInput::Exit => {
+                self.is_over = true;
+                None
             }
+            UserInput::Character(_) | UserInput::Noop => None,
         };
 
-        self.state = new_e;
+        if let Some(new_state) = new_state {
+            self.state = new_state;
+        }
         self.is_over
     }
 

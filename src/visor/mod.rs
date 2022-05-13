@@ -8,7 +8,7 @@ pub mod view;
 
 use self::backend::{DebuggableTerminalBackend, TerminalBackend};
 use self::renderer::RootedRenderer;
-use crate::model::AppEvent;
+use crate::model::{AppEvent, Direction};
 use std::fmt::Debug;
 use std::ops::Add;
 
@@ -72,9 +72,24 @@ pub enum UserEventHandled {
 }
 
 pub enum UserInput {
+    Direction(Direction),
     Character(char),
     Confirm,
     Back,
+    Exit,
+    Noop,
+}
+
+impl UserInput {
+    pub fn from_char(c: char) -> Self {
+        match c {
+            'q' => Self::Exit,
+            '\n' => Self::Confirm,
+            'j' => Self::Direction(Direction::Next),
+            'k' => Self::Direction(Direction::Prev),
+            _ => Self::Noop,
+        }
+    }
 }
 
 impl<T> Engine<'_, T>
@@ -104,16 +119,5 @@ where
         self.backend.flush();
 
         //sink.flush().unwrap(); // TODO
-    }
-
-    pub fn trigger(&mut self, event: UserInput) -> Option<AppEvent> {
-        match self.root_component.handle(&event) {
-            UserEventHandled::ViewChange | UserEventHandled::Noop => {}
-            UserEventHandled::AppEvent(appevent) => {
-                return Some(appevent);
-            }
-        }
-
-        None
     }
 }

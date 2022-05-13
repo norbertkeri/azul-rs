@@ -1,7 +1,7 @@
 use self::player::PlayerAreaView;
 
 use super::buildingarea::ScoreView;
-use super::{AppEvent, CommonAreaView, Direction, Factory, FactoryId, Game, Tile};
+use super::{CommonAreaView, Factory, FactoryId, Game, Tile};
 use crate::visor::renderer::RootedRenderer;
 use crate::visor::view::PanelBuilder;
 use crate::{
@@ -247,51 +247,5 @@ impl<const N: usize> Component for GameView<N> {
 
     fn declare_dimensions(&self) -> (u16, u16) {
         panic!("Never called");
-    }
-
-    fn handle(&mut self, e: &UserInput) -> UserEventHandled {
-        let game = self.game.as_ref().borrow();
-        match e {
-            UserInput::Character(c) => match game.state {
-                GameState::PickSource { .. } => match c {
-                    'j' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Next)),
-                    'k' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Prev)),
-                    _ => UserEventHandled::Noop,
-                },
-                GameState::PickTileFromSource { .. } => match c {
-                    'j' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Next)),
-                    'k' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Prev)),
-                    _ => UserEventHandled::Noop,
-                },
-                GameState::PickRowToPutTiles { .. } => match c {
-                    'j' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Next)),
-                    'k' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Prev)),
-                    _ => UserEventHandled::Noop,
-                },
-            },
-            UserInput::Confirm => match game.state {
-                GameState::PickSource => {
-                    let source = game.find_source(game.current_source);
-                    let tile = source
-                        .find_first_tile()
-                        .expect("You managed to pick a source that has no tiles?");
-
-                    UserEventHandled::AppEvent(AppEvent::TransitionToPickTileFromFactory { tile })
-                }
-                GameState::PickTileFromSource { selected_tile } => {
-                    UserEventHandled::AppEvent(AppEvent::TransitionToPickRow {
-                        tile: selected_tile,
-                    })
-                }
-                GameState::PickRowToPutTiles {
-                    tile,
-                    selected_row_id,
-                } => UserEventHandled::AppEvent(AppEvent::PlaceTiles {
-                    tile,
-                    row_id: selected_row_id,
-                }),
-            },
-            UserInput::Back => UserEventHandled::Noop,
-        }
     }
 }
