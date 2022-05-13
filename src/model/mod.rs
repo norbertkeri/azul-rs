@@ -545,7 +545,7 @@ impl<const N: usize> Game<N> {
                     panic!("Ran out of pickable sources, advance gamestate to tiling and scoring");
                 }
                 GameState::PickSource {
-                    player_id: 1 - player_id, // TODO this could be N - player_id ?
+                    player_id: (N - 1) - player_id,
                     current_source: *next_source.unwrap(),
                 }
             }

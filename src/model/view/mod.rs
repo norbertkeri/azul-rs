@@ -106,7 +106,7 @@ pub fn render_pickables(is_selected: bool, tiles: &[Tile], selected_tiles: &[Til
             }
         }
     }
-    return output;
+    output
 }
 
 impl Component for FactoryView<'_> {

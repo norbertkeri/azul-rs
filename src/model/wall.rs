@@ -123,13 +123,6 @@ impl Wall {
         self.points
     }
 
-    fn is_filled(&self, (row, col): (usize, usize)) -> bool {
-        match self.slots[row][col] {
-            Slot::Filled(_) => true,
-            Slot::Free(_) => false,
-        }
-    }
-
     fn at(&self, row: usize, col: usize) -> &Slot {
         &self.slots[row][col]
     }
@@ -184,6 +177,7 @@ impl<'a> Component for WallView<'a> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::{Wall, AREA_LENGTH};
     use crate::model::wall::FillResult;
