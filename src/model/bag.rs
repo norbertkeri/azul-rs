@@ -20,7 +20,7 @@ impl Bag {
     }
 
     pub fn fill_factory(&mut self, factory: &mut Factory) {
-        let new_tiles = match factory.0 {
+        let mut new_tiles = match factory.0 {
             Some(_) => panic!("You tried filling a non-empty factory"),
             None => {
                 let mut some_tiles = self.draw(TILE_PER_FACTORY);
@@ -35,6 +35,7 @@ impl Bag {
             }
         };
         assert!(new_tiles.len() == TILE_PER_FACTORY);
+        new_tiles.sort();
         factory.0 = Some(new_tiles.try_into().unwrap());
     }
 
