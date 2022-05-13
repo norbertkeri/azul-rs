@@ -1,4 +1,4 @@
-use crate::visor::{terminal_writer::RootedRenderer, Coords};
+use crate::visor::{renderer::RootedRenderer, Coords};
 use derive_builder::Builder;
 use std::fmt::Debug;
 
@@ -117,7 +117,7 @@ impl Component for Panel<'_> {
         let (vertical_padding, horizontal_padding) = (self.padding, self.padding);
 
         for i in 1..=vertical_padding {
-            writer.reset_cursor();
+            writer.reset_cursor_to_root();
             writer.set_cursor_to(Coords(0, i));
             writer.write("│");
             writer.set_cursor_to(Coords(w - 1, i));
@@ -126,9 +126,9 @@ impl Component for Panel<'_> {
 
         let subroot = Coords(1 + horizontal_padding, 1 + vertical_padding); // +1 for the border
         let mut rooted = RootedRenderer::subrooted(writer, subroot);
-        rooted.reset_cursor();
+        rooted.reset_cursor_to_root();
         self.component.render(&mut rooted);
-        writer.reset_cursor();
+        writer.reset_cursor_to_root();
         for i in (1 + vertical_padding)..=(h - 2) {
             let beginning = Coords(0, i);
             writer.set_cursor_to(beginning);

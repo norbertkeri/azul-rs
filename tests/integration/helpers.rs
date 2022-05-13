@@ -1,4 +1,4 @@
-use furnace::visor::{terminal_writer::TestBackend, view::TextView, Component, Engine};
+use furnace::visor::{view::TextView, Component, Engine, backend::TestBackend};
 
 pub fn to_textviews<const N: usize>(data: [&str; N]) -> Vec<Box<dyn Component>> {
     data.iter()

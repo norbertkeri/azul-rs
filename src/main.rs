@@ -9,8 +9,8 @@ use std::{
 use furnace::model::player::Player;
 use furnace::model::view::{FactoryView, GameView};
 use furnace::model::{Factory, Game, Tile};
+use furnace::visor::backend::TermionBackend;
 use furnace::visor::layout::Layout;
-use furnace::visor::terminal_writer::TermionBackend;
 use furnace::visor::view::{Panel, PanelBuilder, TextView};
 use furnace::visor::{Component, Engine, UserInput};
 use termion::input::TermRead;

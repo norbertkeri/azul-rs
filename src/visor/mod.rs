@@ -1,10 +1,13 @@
 #![allow(dead_code)]
 
 pub mod layout;
-pub mod terminal_writer;
+pub mod renderer;
 pub mod view;
+pub mod inmemory;
+pub mod backend;
 
-use self::terminal_writer::{DebuggableTerminalBackend, RootedRenderer, TerminalBackend};
+use self::backend::{TerminalBackend, DebuggableTerminalBackend};
+use self::renderer::RootedRenderer;
 use crate::model::AppEvent;
 use std::fmt::Debug;
 use std::ops::Add;
@@ -19,6 +22,12 @@ pub trait Component {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Coords(u16, u16);
+
+impl Coords {
+    pub fn new(x: u16, y: u16) -> Self {
+        Coords(x, y)
+    }
+}
 
 impl From<(u16, u16)> for Coords {
     fn from(a: (u16, u16)) -> Self {
@@ -51,8 +60,8 @@ impl Add for Coords {
     }
 }
 
-pub struct Engine<'a, T> {
-    writer: T,
+pub struct Engine<'a, T: TerminalBackend> {
+    backend: T,
     root_component: Box<dyn Component + 'a>,
 }
 
@@ -73,7 +82,7 @@ where
     T: DebuggableTerminalBackend,
 {
     pub fn get_contents(&self) -> String {
-        self.writer.get_contents()
+        self.backend.get_contents()
     }
 }
 
@@ -81,18 +90,18 @@ impl<'a, T> Engine<'a, T>
 where
     T: TerminalBackend,
 {
-    pub fn new<W: Into<Box<dyn Component + 'a>>>(writer: T, root_component: W) -> Self {
+    pub fn new<W: Into<Box<dyn Component + 'a>>>(backend: T, root_component: W) -> Self {
         Self {
-            writer,
+            backend,
             root_component: root_component.into(),
         }
     }
 
     pub fn render(&mut self) {
-        self.writer.clear();
-        let mut writer = RootedRenderer::new(&mut self.writer, Coords(1, 1));
-        self.root_component.render(&mut writer);
-        self.writer.flush();
+        self.backend.clear();
+        let mut renderer = RootedRenderer::new(&mut self.backend, Coords(1, 1));
+        self.root_component.render(&mut renderer);
+        self.backend.flush();
 
         //sink.flush().unwrap(); // TODO
     }

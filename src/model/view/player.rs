@@ -1,6 +1,6 @@
 use crate::{
     model::player::{BuildingAreaView, Player},
-    visor::{layout::Layout, view::PanelBuilder, Component},
+    visor::{layout::Layout, view::PanelBuilder, Component, renderer::RootedRenderer},
 };
 
 pub struct PlayerView<'a> {
@@ -14,7 +14,7 @@ impl<'a> PlayerView<'a> {
 }
 
 impl<'a> Component for PlayerView<'a> {
-    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
+    fn render(&self, writer: &mut RootedRenderer) {
         BuildingAreaView::new(self.player.get_buildingarea()).render(writer);
     }
 
@@ -34,7 +34,7 @@ impl<'a> PlayerAreaView<'a> {
 }
 
 impl<'a> Component for PlayerAreaView<'a> {
-    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
+    fn render(&self, writer: &mut RootedRenderer) {
         let players: Vec<Box<dyn Component>> = self
             .players
             .iter()

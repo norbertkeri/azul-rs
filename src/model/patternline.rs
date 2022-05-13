@@ -1,4 +1,4 @@
-use crate::visor::Component;
+use crate::visor::{Component, renderer::RootedRenderer};
 
 use super::{bag::Bag, Pickable, Tile};
 
@@ -115,7 +115,7 @@ impl<'a> From<PatternLineView<'a>> for Box<dyn Component + 'a> {
 }
 
 impl<'a> Component for PatternLineView<'a> {
-    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
+    fn render(&self, writer: &mut RootedRenderer) {
         match *self.line {
             PatternLine::Free { length } => {
                 writer.write(&format!("{: >5}", "☐".repeat(length)));

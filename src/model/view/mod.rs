@@ -1,6 +1,7 @@
 use self::player::PlayerAreaView;
 
 use super::{AppEvent, Factory, Game, Tile};
+use crate::visor::renderer::RootedRenderer;
 use crate::visor::view::PanelBuilder;
 use crate::{
     model::GameState,
@@ -29,7 +30,7 @@ impl TileView {
 }
 
 impl Component for TileView {
-    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
+    fn render(&self, writer: &mut RootedRenderer) {
         let s = if self.selected {
             format!("|{}|", self.tile)
         } else {
@@ -81,7 +82,7 @@ impl<'a> From<FactoryView<'a>> for Box<dyn Component + 'a> {
 }
 
 impl Component for FactoryView<'_> {
-    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
+    fn render(&self, writer: &mut RootedRenderer) {
         let mut began_selection = false;
         if let Some(tiles) = self.factory.get_tiles() {
             let mut iter = tiles.iter().peekable();
@@ -137,7 +138,7 @@ struct FactoryAreaView {
 }
 
 impl Component for FactoryAreaView {
-    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
+    fn render(&self, writer: &mut RootedRenderer) {
         let factory_views: Vec<_> = self
             .factories
             .iter()
@@ -177,7 +178,7 @@ pub struct GameView<const N: usize> {
 }
 
 impl<const N: usize> Component for GameView<N> {
-    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
+    fn render(&self, writer: &mut RootedRenderer) {
         let game = self.game.as_ref().borrow();
         let factory_state = match game.state {
             GameState::PickFactory {

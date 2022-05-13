@@ -1,6 +1,6 @@
 use std::cmp::max;
 
-use super::{terminal_writer::RootedRenderer, Component, Coords, UserEventHandled};
+use super::{renderer::RootedRenderer, Component, Coords, UserEventHandled};
 
 pub type Components<'a> = Vec<Box<dyn Component + 'a>>;
 
@@ -52,7 +52,7 @@ impl<'a> Component for Layout<'a> {
         let mut dims = Coords(0, 0);
         for component in self.components.iter() {
             let mut rooted = RootedRenderer::subrooted(renderer, dims);
-            rooted.reset_cursor();
+            rooted.reset_cursor_to_root();
             component.render(&mut rooted);
             let dimensions = component.declare_dimensions();
             let move_root_by: Coords = match self.direction {
