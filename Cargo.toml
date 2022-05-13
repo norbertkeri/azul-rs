@@ -12,7 +12,7 @@ doctest = false
 rand = "*"
 termion = "*"
 derive_builder = "*"
-
-[dev-dependencies]
 pretty_assertions = "*"
 test-case = "2.0.0-rc1"
+
+[dev-dependencies]
