@@ -1,10 +1,13 @@
-use crate::{model::player::Player, visor::{Component, view::TextView}};
+use crate::visor::view::PanelBuilder;
+use crate::{
+    model::player::Player,
+    visor::{view::TextView, Component},
+};
 use rand::{distributions::Standard, prelude::Distribution};
 use std::{
     fmt::{Debug, Display},
     str::FromStr,
 };
-use crate::visor::view::PanelBuilder;
 
 use self::patternline::PatternLine;
 
@@ -178,13 +181,19 @@ struct CommonAreaView<'a> {
 }
 
 impl<'a> CommonAreaView<'a> {
-    fn new(common_area: &'a CommonArea, selected: Option<Pickable>) -> Self { Self { common_area, selected } }
-
+    fn new(common_area: &'a CommonArea, selected: Option<Pickable>) -> Self {
+        Self {
+            common_area,
+            selected,
+        }
+    }
 }
 
 impl<'a> Component for CommonAreaView<'a> {
     fn render(&self, writer: &mut crate::visor::renderer::RootedRenderer) {
-        let output: String = self.common_area.inspect()
+        let output: String = self
+            .common_area
+            .inspect()
             .iter()
             .map(|t| t.to_string())
             .collect();
@@ -395,8 +404,8 @@ impl<const N: usize> Game<N> {
                     factory_id,
                     selected_tile,
                 } => {
-                    let next_tile = self.factories[factory_id]
-                        .find_adjacent_tile(selected_tile, dir);
+                    let next_tile =
+                        self.factories[factory_id].find_adjacent_tile(selected_tile, dir);
                     GameState::PickTileFromFactory {
                         player_id,
                         factory_id,
@@ -412,13 +421,7 @@ impl<const N: usize> Game<N> {
                     let factory = &self.get_factories()[factory_id];
                     let count = factory.count_tile(tile);
                     let selected_row_id = self
-                        .find_adjacent_selectable_row(
-                            tile,
-                            count,
-                            player_id,
-                            selected_row_id,
-                            dir,
-                        )
+                        .find_adjacent_selectable_row(tile, count, player_id, selected_row_id, dir)
                         .unwrap_or(selected_row_id);
                     GameState::PickRowToPutTiles {
                         factory_id,
