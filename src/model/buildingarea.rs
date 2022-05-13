@@ -177,10 +177,8 @@ impl<'a> BuildingAreaView<'a> {
 impl<'a> Component for BuildingAreaView<'a> {
     fn render(&self, writer: &mut RootedRenderer) {
         let panel = Layout::vertical(
-            0,
             vec![
                 Box::new(Layout::horizontal(
-                    0,
                     vec![
                         Box::new(InProgressView::new(
                             self.selected,
@@ -193,10 +191,6 @@ impl<'a> Component for BuildingAreaView<'a> {
             ],
         );
         panel.render(writer);
-    }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        (15, 7)
     }
 }
 
@@ -219,13 +213,9 @@ impl<'a> Component for InProgressView<'a> {
         for (i, pl) in self.in_progress.iter().enumerate() {
             let is_selected = self.selected.map(|x| x == i).unwrap_or(false);
             PatternLineView::new(pl, is_selected).render(writer);
-            let next = (i + 1) as u16;
-            writer.set_cursor_to((0, next).into());
+            let next = (i + 2) as u16;
+            writer.set_cursor_to((1, next).into());
         }
-    }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        (10, 5)
     }
 }
 
@@ -256,11 +246,5 @@ impl<'a> Component for ScoreView<'a> {
             .unwrap();
 
         panel.render(writer);
-    }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        let mut height: u16 = self.players.len().try_into().unwrap();
-        height += 2;
-        (10, height)
     }
 }

@@ -40,14 +40,6 @@ impl Component for TileView {
         writer.write(&s);
     }
 
-    fn declare_dimensions(&self) -> (u16, u16) {
-        if self.selected {
-            (3, 1)
-        } else {
-            (1, 1)
-        }
-    }
-
     fn handle(&mut self, _event: &UserInput) -> UserEventHandled {
         UserEventHandled::Noop
     }
@@ -65,13 +57,6 @@ impl<'a> FactoryView<'a> {
             factory,
             selected_tile,
             is_selected,
-        }
-    }
-
-    fn has_selected_tile(&self) -> bool {
-        match (self.factory.get_tiles(), self.selected_tile) {
-            (Some(tiles), Some(selected_tile)) => tiles.contains(&selected_tile),
-            _ => false,
         }
     }
 }
@@ -121,13 +106,6 @@ impl Component for FactoryView<'_> {
             writer.write(&render_pickables(self.is_selected, tiles, &selected_tiles));
         }
         writer.write("\n");
-    }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        if self.has_selected_tile() {
-            return (8, 1);
-        }
-        (5, 1)
     }
 
     fn handle(&mut self, _event: &UserInput) -> UserEventHandled {
@@ -199,15 +177,11 @@ impl Component for FactoryAreaView<'_> {
         let panel = PanelBuilder::default()
             .name("Factories")
             .padding(1)
-            .component(Box::new(Layout::vertical(0, factory_views)))
+            .component(Box::new(Layout::vertical(factory_views)))
             .build()
             .unwrap();
 
         panel.render(writer);
-    }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        (18, 8)
     }
 }
 
@@ -225,15 +199,12 @@ impl<const N: usize> Component for GameView<N> {
 
         let gameview = PanelBuilder::default()
             .component(Box::new(Layout::vertical(
-                1,
                 vec![
                     Box::new(player_area),
                     Box::new(Layout::horizontal(
-                        1,
                         vec![
                             Box::new(factory_area),
                             Box::new(Layout::vertical(
-                                1,
                                 vec![Box::new(common_area), Box::new(score_view)],
                             )),
                         ],
@@ -245,7 +216,4 @@ impl<const N: usize> Component for GameView<N> {
         gameview.render(writer);
     }
 
-    fn declare_dimensions(&self) -> (u16, u16) {
-        panic!("Never called");
-    }
 }

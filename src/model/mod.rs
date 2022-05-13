@@ -243,16 +243,12 @@ impl<'a> Component for CommonAreaView<'a> {
         let output = render_pickables(is_selected, &self.common_area.0, &selected_tiles);
 
         let panel = PanelBuilder::default()
-            .name("Common area")
+            .name("Common")
             .padding(0)
             .component(Box::new(TextView::from(output)))
             .build()
             .unwrap();
         panel.render(writer);
-    }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        (12, 3)
     }
 
     fn handle(&mut self, _event: &crate::visor::UserInput) -> crate::visor::UserEventHandled {

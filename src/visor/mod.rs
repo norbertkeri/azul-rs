@@ -1,7 +1,4 @@
-#![allow(dead_code)]
-
 pub mod backend;
-pub mod inmemory;
 pub mod layout;
 pub mod renderer;
 pub mod view;
@@ -14,7 +11,6 @@ use std::ops::Add;
 
 pub trait Component {
     fn render(&self, writer: &mut RootedRenderer);
-    fn declare_dimensions(&self) -> (u16, u16);
     fn handle(&mut self, _event: &UserInput) -> UserEventHandled {
         UserEventHandled::Noop
     }
@@ -32,6 +28,12 @@ impl Coords {
 impl From<(u16, u16)> for Coords {
     fn from(a: (u16, u16)) -> Self {
         Self(a.0, a.1)
+    }
+}
+
+impl From<Coords> for (u16, u16) {
+    fn from(val: Coords) -> Self {
+        (val.0, val.1)
     }
 }
 
@@ -114,7 +116,7 @@ where
 
     pub fn render(&mut self) {
         self.backend.clear();
-        let mut renderer = RootedRenderer::new(&mut self.backend, Coords(1, 1));
+        let mut renderer = RootedRenderer::default_with_writer(&mut self.backend);
         self.root_component.render(&mut renderer);
         self.backend.flush();
 

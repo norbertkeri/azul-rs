@@ -1,4 +1,6 @@
-use azulrs::visor::{backend::TestBackend, view::TextView, Component, Engine};
+use azulrs::visor::{
+    backend::TestBackend, renderer::RootedRenderer, view::TextView, Component, Coords, Engine,
+};
 
 pub fn to_textviews<const N: usize>(data: [&str; N]) -> Vec<Box<dyn Component>> {
     data.iter()
@@ -7,6 +9,7 @@ pub fn to_textviews<const N: usize>(data: [&str; N]) -> Vec<Box<dyn Component>> 
         .collect()
 }
 
+#[track_caller]
 pub fn expect_component<'a, T: Into<Box<dyn Component + 'a>>>(component: T, expected: &str) {
     let backend = TestBackend::default();
     let mut engine = Engine::new(backend, component);
@@ -16,4 +19,13 @@ pub fn expect_component<'a, T: Into<Box<dyn Component + 'a>>>(component: T, expe
         println!("=====\nExpected:\n{}\n=====\nGot:\n{}", expected, result);
         panic!("Rendered outputs don't match");
     }
+}
+
+#[track_caller]
+pub fn assert_dimensions(component: &dyn Component, expected: (u16, u16)) {
+    let mut backend = TestBackend::default();
+    let mut writer = RootedRenderer::default_with_writer(&mut backend);
+    let node_id = writer.render_into_layer("dimension_assert", Coords::new(0, 0), component);
+    let dimensions = writer.get_drawn_area(node_id);
+    assert_eq!(dimensions, expected);
 }

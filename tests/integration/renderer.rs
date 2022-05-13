@@ -3,32 +3,21 @@ use azulrs::visor::{
     layout::Layout,
     renderer::RootedRenderer,
     view::{PanelBuilder, TextView},
-    Component, Coords,
+    Component,
 };
 
 #[test]
-#[ignore]
-fn test_drawn_area() {
-    let hello = TextView::new(String::from("Hello"));
-    let panel = PanelBuilder::default()
-        .component(Box::new(hello))
-        .build()
-        .unwrap();
-    /*
-    ┌─────┐
-    │Hello│
-    └─────┘
-    */
+fn test_drawn_area_textbox_linebreaks() {
+    let hello = TextView::new(String::from("Hello\nWorld"));
     let mut backend = TestBackend::default();
-    let mut writer = RootedRenderer::new(&mut backend, Coords::new(1, 1));
+    let mut writer = RootedRenderer::default_with_writer(&mut backend);
 
-    panel.render(&mut writer);
+    hello.render(&mut writer);
 
-    //pretty_assertions::assert_eq!(writer.get_drawn_area(), (7, 3));
+    pretty_assertions::assert_eq!(writer.get_drawn_area_for_active_layer(), (5, 2));
 }
 
 #[test]
-#[ignore]
 fn test_drawn_area2() {
     let hellos = ["Hello", "World"].map(TextView::from).map(|tview| {
         Box::new(
@@ -47,17 +36,16 @@ fn test_drawn_area2() {
     │Hello│
     └─────┘
     */
-    let layout = Layout::vertical(0, Vec::from(hellos));
+    let layout = Layout::vertical(Vec::from(hellos));
     let mut backend = TestBackend::default();
-    let mut writer = RootedRenderer::new(&mut backend, Coords::new(1, 1));
+    let mut writer = RootedRenderer::default_with_writer(&mut backend);
 
     layout.render(&mut writer);
 
-    //pretty_assertions::assert_eq!(writer.get_drawn_area(), (7, 6));
+    pretty_assertions::assert_eq!(writer.get_drawn_area_for_active_layer(), (7, 6));
 }
 
 #[test]
-#[ignore]
 fn test_drawn_area3() {
     let hellos = ["Hello", "World"].map(TextView::from).map(|tview| {
         Box::new(
@@ -69,15 +57,46 @@ fn test_drawn_area3() {
     });
 
     /*
-    ┌─────┐ ┌─────┐
-    │Hello│ │Hello│
-    └─────┘ └─────┘
+    ┌─────┐┌─────┐
+    │Hello││Hello│
+    └─────┘└─────┘
     */
-    let layout = Layout::horizontal(0, Vec::from(hellos));
+    let layout = Layout::horizontal(Vec::from(hellos));
     let mut backend = TestBackend::default();
-    let mut writer = RootedRenderer::new(&mut backend, Coords::new(1, 1));
+    let mut writer = RootedRenderer::default_with_writer(&mut backend);
 
     layout.render(&mut writer);
 
-    //pretty_assertions::assert_eq!(writer.get_drawn_area(), (14, 3));
+    pretty_assertions::assert_eq!(writer.get_drawn_area_for_active_layer(), (14, 3));
+}
+
+#[test]
+fn test_drawn_area4() {
+    let hellos = ["Hello", "World"].map(TextView::from).map(|tview| {
+        Box::new(
+            PanelBuilder::default()
+                .component(Box::new(tview) as Box<_>)
+                .build()
+                .unwrap(),
+        ) as Box<_>
+    });
+
+    /*
+    ┌──────────────┐
+    │┌─────┐┌─────┐│
+    ││Hello││Hello││
+    │└─────┘└─────┘│
+    └──────────────┘
+    */
+    let layout = Layout::horizontal(Vec::from(hellos));
+    let panel = PanelBuilder::default()
+        .component(Box::new(layout))
+        .build()
+        .unwrap();
+    let mut backend = TestBackend::default();
+    let mut writer = RootedRenderer::default_with_writer(&mut backend);
+
+    panel.render(&mut writer);
+
+    pretty_assertions::assert_eq!(writer.get_drawn_area_for_active_layer(), (16, 5));
 }

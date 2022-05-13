@@ -1,109 +1,107 @@
 use azulrs::visor::{
     layout::Layout,
     view::{PanelBuilder, TextView},
+    Component,
 };
 
-use crate::helpers::expect_component;
+use crate::helpers::{assert_dimensions, expect_component};
+use test_case::test_case;
 
-#[test]
-fn test_oneline_panel() {
-    let hello = TextView::new(String::from("Hello"));
+fn textview_in_panel(text: &str) -> Box<dyn Component> {
     let panel = PanelBuilder::default()
-        .component(Box::new(hello))
+        .component(Box::new(TextView::new(String::from(text))) as Box<_>)
         .build()
         .unwrap();
-    let expected = r#"
-┌─────┐
-│Hello│
-└─────┘"#
-        .trim_start();
-    expect_component(panel, expected);
+    Box::new(panel) as Box<_>
 }
 
-#[test]
-fn test_panel_with_padding() {
-    let hello = TextView::new(String::from("Hello"));
-    let panel = PanelBuilder::default()
-        .component(Box::new(hello))
-        .padding(1)
-        .build()
-        .unwrap();
-    let expected = r#"
+#[test_case(
+    r#"Hello
+Hello
+Hello"#,
+    r#"
+┌─────┐
+│Hello│
+│Hello│
+│Hello│
+└─────┘
+"#,
+    0,
+    (7, 5)
+)]
+#[test_case(
+    "Hello",
+    r#"
 ┌───────┐
 │       │
 │ Hello │
 │       │
-└───────┘"#
-        .trim_start();
-    expect_component(panel, expected);
-}
-
-#[test]
-fn test_panel_with_longer_title_than_content_should_expand_width() {
-    let hello = TextView::new(String::from("Hello"));
+└───────┘
+"#,
+    1,
+(9, 5)
+)]
+fn test_panel_with_border(
+    text: &str,
+    expected_output: &str,
+    padding: u16,
+    expected_dimensions: (u16, u16),
+) {
+    let hello = TextView::new(String::from(text));
     let panel = PanelBuilder::default()
         .component(Box::new(hello))
-        .name("Very long title")
+        .padding(padding)
         .build()
         .unwrap();
-    let expected = r#"
+    assert_dimensions(&panel, expected_dimensions);
+    expect_component(panel, expected_output.trim());
+}
+
+#[test_case(
+    "Very long title",
+    "Hello",
+    "
 ┌| Very long title |┐
 │Hello              │
-└───────────────────┘"#
-        .trim_start();
-    expect_component(panel, expected);
-}
-
-#[test]
-fn test_panel_with_name_odd() {
-    let hello = TextView::new(String::from("Hello world"));
-    let panel = PanelBuilder::default()
-        .component(Box::new(hello))
-        .name("x")
-        .build()
-        .unwrap();
-    let expected = r#"
+└───────────────────┘
+"
+)]
+#[test_case(
+    "x",
+    "Hello world",
+    "
 ┌───| x |───┐
 │Hello world│
-└───────────┘"#
-        .trim_start();
-    expect_component(panel, expected);
-}
-
-/*
-* Test if the panel has an even number of character, but the box width is uneven, the
-* title becomes slightly off center, but it still lines up with the borders.
-*/
-#[test]
-fn test_panel_with_name_even() {
-    let hello = TextView::new(String::from("Hello world"));
-    let panel = PanelBuilder::default()
-        .component(Box::new(hello))
-        .name("xx")
-        .build()
-        .unwrap();
-    let expected = r#"
+└───────────┘
+"
+)]
+#[test_case(
+    "xx",
+    "Hello world",
+    "
 ┌──| xx |───┐
 │Hello world│
-└───────────┘"#
-        .trim_start();
-    expect_component(panel, expected);
+└───────────┘
+"
+)]
+fn test_panel_title(title: &str, content: &str, expected: &str) {
+    let hello = TextView::new(String::from(content));
+    let panel = PanelBuilder::default()
+        .component(Box::new(hello))
+        .name(title)
+        .build()
+        .unwrap();
+    expect_component(panel, expected.trim());
 }
 
 #[test]
 fn test_two_panels_horizontally() {
     let hellos = ["Hello", "Hello"]
         .into_iter()
-        .map(|s| {
-            let panel = PanelBuilder::default()
-                .component(Box::new(TextView::new(String::from(s))) as Box<_>)
-                .build()
-                .unwrap();
-            Box::new(panel) as Box<_>
-        })
+        .map(textview_in_panel)
         .collect();
     let panel = PanelBuilder::default()
-        .component(Box::new(Layout::horizontal(0, hellos)))
+        .component(Box::new(Layout::horizontal(hellos)))
         .build()
         .unwrap();
     let expected = r#"
@@ -118,18 +116,9 @@ fn test_two_panels_horizontally() {
 
 #[test]
 fn test_panel_in_layout_in_panel() {
-    let hellos = ["Hello"]
-        .into_iter()
-        .map(|s| {
-            let panel = PanelBuilder::default()
-                .component(Box::new(TextView::new(String::from(s))) as Box<_>)
-                .build()
-                .unwrap();
-            Box::new(panel) as Box<_>
-        })
-        .collect();
+    let hellos = ["Hello"].into_iter().map(textview_in_panel).collect();
     let panel = PanelBuilder::default()
-        .component(Box::new(Layout::horizontal(0, hellos)))
+        .component(Box::new(Layout::horizontal(hellos)))
         .build()
         .unwrap();
     let expected = r#"
@@ -145,7 +134,7 @@ fn test_panel_in_layout_in_panel() {
 #[test]
 fn test_panel_in_panel() {
     let hello = PanelBuilder::default()
-        .component(Box::new(TextView::new(String::from("Hello"))) as Box<_>)
+        .component(Box::new(TextView::from("Hello")) as Box<_>)
         .name("i")
         .build()
         .unwrap();
@@ -161,17 +150,5 @@ fn test_panel_in_panel() {
 │└─────┘│
 └───────┘"#
         .trim_start();
-    expect_component(panel, expected);
-}
-
-#[test]
-fn test_vertical_layout_linebreaks() {
-    let hellos: [Box<_>; 3] =
-        ["Hello", "world", "again"].map(|s| Box::new(TextView::from(s)) as Box<_>);
-    let panel = Layout::vertical(0, Vec::from(hellos));
-    let expected = r#"Hello
-world
-again"#;
-
     expect_component(panel, expected);
 }

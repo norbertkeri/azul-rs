@@ -1,12 +1,9 @@
-use std::cmp::max;
-
 use super::{renderer::RootedRenderer, Component, Coords, UserEventHandled};
 
 pub type Components<'a> = Vec<Box<dyn Component + 'a>>;
 
 pub struct Layout<'a> {
     direction: Direction,
-    padding: u8,
     components: Components<'a>,
 }
 
@@ -17,26 +14,23 @@ impl<'a> From<Layout<'a>> for Box<dyn Component + 'a> {
 }
 
 impl<'a> Layout<'a> {
-    pub fn new(direction: Direction, padding: u8, components: Components<'a>) -> Self {
+    pub fn new(direction: Direction, components: Components<'a>) -> Self {
         Self {
             direction,
-            padding,
             components,
         }
     }
 
-    pub fn horizontal(padding: u8, components: Components<'a>) -> Self {
+    pub fn horizontal(components: Components<'a>) -> Self {
         Self {
             direction: Direction::Horizontal,
-            padding,
             components,
         }
     }
 
-    pub fn vertical(padding: u8, components: Components<'a>) -> Self {
+    pub fn vertical(components: Components<'a>) -> Self {
         Self {
             direction: Direction::Vertical,
-            padding,
             components,
         }
     }
@@ -51,34 +45,19 @@ impl<'a> Component for Layout<'a> {
     fn render(&self, renderer: &mut RootedRenderer) {
         let mut dims = Coords(0, 0);
         for component in self.components.iter() {
-            let mut rooted = RootedRenderer::subrooted(renderer, dims);
-            rooted.reset_cursor_to_root();
-            component.render(&mut rooted);
-            let dimensions = component.declare_dimensions();
-            let move_root_by: Coords = match self.direction {
-                Direction::Horizontal => (dimensions.0, 0).into(),
-                Direction::Vertical => (0, dimensions.1).into(),
+            let name = match self.direction {
+                Direction::Horizontal => "layout-horizontal",
+                Direction::Vertical => "layout-vertical",
             };
-            dims = dims + move_root_by;
-        }
-    }
+            let node_id = renderer.render_into_layer(name, dims, component.as_ref());
 
-    fn declare_dimensions(&self) -> (u16, u16) {
-        self.components.iter().fold((0, 0), |acc, next_component| {
-            let next = next_component.declare_dimensions();
-            match self.direction {
-                Direction::Horizontal => {
-                    let length = acc.0 + next.0;
-                    let height = max(acc.1, next.1);
-                    (length, height)
-                }
-                Direction::Vertical => {
-                    let length = max(acc.0, next.0);
-                    let height = acc.1 + next.1;
-                    (length, height)
-                }
-            }
-        })
+            let just_rendered_area = renderer.get_drawn_area(node_id);
+            let move_root_by: Coords = match self.direction {
+                Direction::Horizontal => (just_rendered_area.0, 0).into(),
+                Direction::Vertical => (0, just_rendered_area.1).into(),
+            };
+            dims = move_root_by + dims;
+        }
     }
 
     fn handle(&mut self, _event: &super::UserInput) -> UserEventHandled {

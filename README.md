@@ -4,7 +4,7 @@ My pet project for learning rust, an implementation of the board game called [Az
 
 It looks like this right now:
 
-![image of a game in progress](./assets/1647204837.png)
+![image of a game in progress](./assets/1650565479.png)
 
 At the moment it's two players only, with no remote multiplayer (so both players would have to sit at the same computer). There is a really basic TUI interface that I threw together using [termion](https://crates.io/crates/termion), which unfortunately doesn't lend itself well to playing the game, unless you already know the rules.
 
@@ -16,7 +16,7 @@ Only about 40% of the game is implemented currently.
 - [ ] Have some kind of rules/legend explanation
 - [ ] Play with 3-4 players
 - [ ] Remote multiplayer
-- [ ] Improve the view rendering
+- [x] Improve the view rendering
 
 ## Tests
 A major reason why I wanted to write my own TUI, and keep it without any styling (like colors) is that I can write tests like this:

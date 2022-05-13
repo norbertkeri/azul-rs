@@ -193,12 +193,8 @@ impl<'a> Component for WallView<'a> {
                     Slot::Free(tile) => writer.write(&tile.to_string()),
                 }
             }
-            writer.set_cursor_to((0, i as u16 + 1).into());
+            writer.set_cursor_to((1, i as u16 + 2).into());
         }
-    }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        (5, 5)
     }
 }
 
@@ -251,7 +247,6 @@ mod tests {
         }
     }
 
-    #[allow(dead_code)]
     fn expect_points(wall: &Wall, expected_points: u8) {
         pretty_assertions::assert_eq!(wall.count_points(), expected_points);
     }

@@ -14,5 +14,6 @@ termion = "*"
 derive_builder = "*"
 pretty_assertions = "*"
 test-case = "2.0.0-rc1"
+indextree = "^4.4"
 
 [dev-dependencies]

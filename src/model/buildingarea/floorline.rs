@@ -77,10 +77,6 @@ impl<'a> Component for FloorLineView<'a> {
             writer.write(&s);
         }
     }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        (7, 2)
-    }
 }
 
 #[cfg(test)]

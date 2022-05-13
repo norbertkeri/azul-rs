@@ -143,10 +143,6 @@ impl<'a> Component for PatternLineView<'a> {
         }
         writer.write(&format!("{: >8}", output));
     }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        (self.line.length().try_into().unwrap(), 1)
-    }
 }
 
 #[cfg(test)]

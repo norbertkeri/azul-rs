@@ -22,10 +22,6 @@ impl<'a> Component for PlayerView<'a> {
         BuildingAreaView::new(self.player.get_buildingarea(), self.selected_building_row)
             .render(writer);
     }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        (20, 7)
-    }
 }
 
 pub struct PlayerAreaView<'a> {
@@ -87,17 +83,12 @@ impl<'a> Component for PlayerAreaView<'a> {
             .collect();
         let panel = PanelBuilder::default()
             .name(String::from("Player area"))
-            .component(Box::new(Layout::horizontal(0, players)))
+            .component(Box::new(Layout::horizontal(players)))
             .build()
             .unwrap();
 
         // TileAreaView
 
         panel.render(writer);
-    }
-
-    fn declare_dimensions(&self) -> (u16, u16) {
-        let length = 23 * self.players.len() as u16;
-        (length, 12)
     }
 }
