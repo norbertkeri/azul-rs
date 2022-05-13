@@ -5,22 +5,22 @@ use super::{
     Component, UserEventHandled,
 };
 
-pub type Components = Vec<Box<dyn Component>>;
+pub type Components<'a> = Vec<Box<dyn Component + 'a>>;
 
-pub struct Layout {
+pub struct Layout<'a> {
     direction: Direction,
     padding: u8,
-    components: Components,
+    components: Components<'a>,
 }
 
-impl From<Layout> for Box<dyn Component> {
-    fn from(s: Layout) -> Self {
+impl<'a> From<Layout<'a>> for Box<dyn Component + 'a> {
+    fn from(s: Layout<'a>) -> Self {
         Box::new(s)
     }
 }
 
-impl Layout {
-    pub fn new(direction: Direction, padding: u8, components: Components) -> Self {
+impl<'a> Layout<'a> {
+    pub fn new(direction: Direction, padding: u8, components: Components<'a>) -> Self {
         Self {
             direction,
             padding,
@@ -28,7 +28,7 @@ impl Layout {
         }
     }
 
-    pub fn horizontal(padding: u8, components: Components) -> Self {
+    pub fn horizontal(padding: u8, components: Components<'a>) -> Self {
         Self {
             direction: Direction::Horizontal,
             padding,
@@ -36,7 +36,7 @@ impl Layout {
         }
     }
 
-    pub fn vertical(padding: u8, components: Components) -> Self {
+    pub fn vertical(padding: u8, components: Components<'a>) -> Self {
         Self {
             direction: Direction::Vertical,
             padding,
@@ -50,7 +50,7 @@ pub enum Direction {
     Vertical,
 }
 
-impl Component for Layout {
+impl<'a> Component for Layout<'a> {
     fn render(&self, writer: &mut dyn TerminalBackend) {
         for component in self.components.iter() {
             writer.reset_cursor();

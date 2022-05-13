@@ -42,9 +42,9 @@ impl Add for Coords {
     }
 }
 
-pub struct Engine<T> {
+pub struct Engine<'a, T> {
     writer: T,
-    root_component: Box<dyn Component>,
+    root_component: Box<dyn Component + 'a>,
 }
 
 pub enum UserEventHandled {
@@ -59,7 +59,7 @@ pub enum UserInput {
     Back,
 }
 
-impl<T> Engine<T>
+impl<T> Engine<'_, T>
 where
     T: DebuggableTerminalBackend,
 {
@@ -68,11 +68,11 @@ where
     }
 }
 
-impl<T> Engine<T>
+impl<'a, T> Engine<'a, T>
 where
     T: TerminalBackend,
 {
-    pub fn new<W: Into<Box<dyn Component>>>(writer: T, root_component: W) -> Self {
+    pub fn new<W: Into<Box<dyn Component + 'a>>>(writer: T, root_component: W) -> Self {
         Self {
             writer,
             root_component: root_component.into(),

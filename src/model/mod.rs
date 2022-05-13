@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
 use crate::model::player::Player;
-use rand::{distributions::Standard, prelude::{Distribution, SliceRandom}, thread_rng};
+use rand::{distributions::Standard, prelude::Distribution};
 use std::{
     fmt::{Debug, Display},
     rc::Rc,
-    str::FromStr, cmp::min,
+    str::FromStr,
 };
 
 pub mod player;

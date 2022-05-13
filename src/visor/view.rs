@@ -62,23 +62,23 @@ pub enum PanelDimensions {
 
 #[derive(Builder)]
 #[builder(pattern = "owned")]
-pub struct Panel {
+pub struct Panel<'a> {
     #[builder(setter(into, strip_option), default)]
     name: Option<String>,
     #[builder(default)]
     padding: u16,
     #[builder(default = "PanelDimensions::ShrinkWrap")]
     dimensions: PanelDimensions,
-    component: Box<dyn Component>,
+    component: Box<dyn Component + 'a>,
 }
 
-impl From<Panel> for Box<dyn Component> {
-    fn from(val: Panel) -> Self {
+impl<'a> From<Panel<'a>> for Box<dyn Component + 'a> {
+    fn from(val: Panel<'a>) -> Self {
         Box::new(val)
     }
 }
 
-impl Component for Panel {
+impl Component for Panel<'_> {
     /**
      * Calculate total length of component, by:
      * Base length + 2*padding, + 2 for borders
@@ -141,7 +141,7 @@ impl Component for Panel {
     }
 }
 
-impl Panel {
+impl Panel<'_> {
     fn draw_header(&self, writer: &mut dyn TerminalBackend) {
         let (w, _h) = self.declare_dimensions();
         writer.write("┌");

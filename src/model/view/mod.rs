@@ -48,14 +48,14 @@ impl Component for TileView {
     }
 }
 
-pub struct FactoryView {
-    factory: Rc<Factory>,
+pub struct FactoryView<'a> {
+    factory: &'a Factory,
     selected_tile: Option<Tile>,
     is_selected: bool,
 }
 
-impl FactoryView {
-    pub fn new(factory: Rc<Factory>, selected_tile: Option<Tile>, is_selected: bool) -> Self {
+impl<'a> FactoryView<'a> {
+    pub fn new(factory: &'a Factory, selected_tile: Option<Tile>, is_selected: bool) -> Self {
         Self {
             factory,
             selected_tile,
@@ -64,17 +64,17 @@ impl FactoryView {
     }
 
     fn has_selected_tile(&self) -> bool {
-        matches!(self.selected_tile, Some(tile) if self.factory.as_ref().0.contains(&tile))
+        matches!(self.selected_tile, Some(tile) if self.factory.0.contains(&tile))
     }
 }
 
-impl From<FactoryView> for Box<dyn Component> {
-    fn from(s: FactoryView) -> Self {
+impl<'a> From<FactoryView<'a>> for Box<dyn Component + 'a> {
+    fn from(s: FactoryView<'a>) -> Self {
         Box::new(s)
     }
 }
 
-impl Component for FactoryView {
+impl Component for FactoryView<'_> {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
         let mut began_selection = false;
         let mut iter = self.factory.get_tiles().iter().peekable();
@@ -143,7 +143,7 @@ impl Component for FactoryAreaView {
                         (false, None)
                     }
                 };
-                let view = FactoryView::new(f.clone(), selected_tile, is_selected);
+                let view = FactoryView::new(f.as_ref(), selected_tile, is_selected);
                 Box::new(view) as Box<dyn Component>
             })
             .collect();

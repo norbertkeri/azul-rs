@@ -7,7 +7,7 @@ pub fn to_textviews<const N: usize>(data: [&str; N]) -> Vec<Box<dyn Component>> 
         .collect()
 }
 
-pub fn expect_component<T: Into<Box<dyn Component>> + 'static>(component: T, expected: &str) {
+pub fn expect_component<'a, T: Into<Box<dyn Component + 'a>>>(component: T, expected: &str) {
     let backend = TestBackend::default();
     let mut engine = Engine::new(backend, component);
     engine.render();
