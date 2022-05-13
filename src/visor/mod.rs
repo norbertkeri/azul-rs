@@ -73,64 +73,17 @@ impl<T> Engine<T>
 where
     T: TerminalBackend,
 {
-    pub fn new(writer: T, root_component: Box<dyn Component>) -> Self {
+    pub fn new<W: Into<Box<dyn Component>>>(writer: T, root_component: W) -> Self {
         Self {
             writer,
-            root_component,
+            root_component: root_component.into(),
         }
     }
 
     pub fn render(&mut self) {
-        /*
-        ┌─┐
-        │ │
-        └─┘
-            */
-
         self.writer.clear();
         self.root_component.render(&mut self.writer);
         self.writer.flush();
-        /*
-        for line in self.root_component.render().lines() {
-            self.writer.write(line);
-        }
-        */
-        /*
-        for (i, component) in self.components.iter().enumerate() {
-            let (width, height) = component.declare_dimensions();
-            let starting_corner = Coords(i as u16 * width + component_padding, 1u16);
-
-            self.writer.move_to(starting_corner, sink);
-            self.writer.write("┌", sink);
-            self.writer.write(&"─".repeat((width - 2).into()), sink);
-            self.writer.write("┐", sink);
-
-            let mut total_lines = 1;
-            for line in component.render().lines() {
-                let line_start = starting_corner + Coords(0, total_lines);
-                self.writer.move_to(line_start, sink);
-                self.writer.write("│", sink);
-                self.writer.write(&" ".repeat(inner_padding), sink);
-                self.writer.write(line, sink);
-                self.writer.move_to(line_start + Coords(width - 1, 0), sink);
-                self.writer.write("│", sink);
-                total_lines += 1;
-            }
-            for i in total_lines..height - 1 {
-                let line_start = starting_corner + Coords(0, i);
-                let line_end = line_start + Coords(width - 1, 0);
-                self.writer.move_to(line_start, sink);
-                self.writer.write("│", sink);
-                self.writer.move_to(line_end, sink);
-                self.writer.write("│", sink);
-            }
-            self.writer
-                .move_to(starting_corner + Coords(0, height - 1), sink);
-            self.writer.write("└", sink);
-            self.writer.write(&"─".repeat((width - 2).into()), sink);
-            self.writer.write("┘", sink);
-        }
-        */
 
         //sink.flush().unwrap(); // TODO
     }

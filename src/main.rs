@@ -6,47 +6,32 @@ use std::{
     rc::Rc,
 };
 
-use furnace::model::{player::PlayerView, Game};
+use furnace::model::{Factory, Tile};
+use furnace::model::view::FactoryView;
+use furnace::visor::terminal_writer::TermionBackend;
+use furnace::visor::{Component, UserInput, Engine};
 use furnace::visor::layout::Layout;
-use furnace::visor::view::TextView;
+use furnace::visor::view::{TextView, Panel, PanelBuilder};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 
-use furnace::model::auction_house::AuctionHouseView;
-use furnace::visor::terminal_writer::TermionBackend;
-use furnace::{
-    model::{player::Player, AuctionHouse},
-    visor::{Engine, UserInput},
-};
-
 fn main() {
-    let hello = TextView::new(String::from("Hello\nWorld"));
-    let world = TextView::new(String::from("Bye World"));
-    let stuff = [hello, world]
-        .into_iter()
-        .map(|x| Box::new(x) as Box<_>)
+    let factories = (0..4).map(|_| {
+        FactoryView::new(Rc::new(Factory::new_random()), None)
+    });
+    let fviews: Vec<Box<dyn Component>> = factories.into_iter()
+        .map(|x| Box::new(x) as Box<dyn Component>)
         .collect();
 
-    let layout = Box::new(Layout::horizontal(0, stuff));
+    let x = PanelBuilder::default()
+        .name("Factories")
+        .padding(1)
+        .component(Box::new(Layout::vertical(0, fviews)))
+        .build()
+        .unwrap();
+
     let backend = TermionBackend::new(Box::new(stdout()));
-    let mut engine = Engine::new(backend, layout);
-
-    /*
-    let ah = Rc::new(RefCell::new(AuctionHouse::default()));
-    let ah_view = AuctionHouseView::new(ah.clone());
-    let players = ["Alice", "Bob"]
-        .into_iter()
-        .map(|name| Rc::new(RefCell::new(Player::with_name(String::from(name)))))
-        .collect::<Vec<_>>();
-
-    let p1_view = PlayerView::new(players[0].clone());
-    let p2_view = PlayerView::new(players[1].clone());
-    let mut game = Game::new(ah, players);
-
-    let mut engine = Engine::new(TerminalWriter::new(stdout), Box::new(p1_view));
-    engine.add_component(Box::new(p2_view));
-    engine.add_component(Box::new(ah_view));
-    */
+    let mut engine = Engine::new(backend, x);
 
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();

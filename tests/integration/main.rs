@@ -1,11 +1,10 @@
-use furnace::visor::{
-    layout::Layout, view::TextView,
-};
+use furnace::visor::{layout::Layout, view::TextView};
 use helpers::{expect_component, to_textviews};
 
+mod helpers;
 mod layout_test;
 mod panel_test;
-mod helpers;
+mod model_views;
 
 fn testdata(data: &str) -> &str {
     data.trim_start()

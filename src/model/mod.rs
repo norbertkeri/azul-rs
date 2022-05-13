@@ -1,82 +1,109 @@
 #![allow(dead_code)]
-use std::{cell::RefCell, rc::Rc};
 
-use self::player::Player;
+use rand::{distributions::Standard, prelude::Distribution};
+use std::fmt::Debug;
 
-pub mod auction_house;
-pub mod player;
+pub mod view;
 
-enum CardEffect {
-    Income(Resources),
+pub struct AppEvent {
 }
 
-enum CardState {
-    Basic,
-    Upgraded,
+pub struct Player {
+    name: String,
 }
 
-impl Default for CardState {
-    fn default() -> Self {
-        Self::Basic
+pub enum Slot {
+    Empty,
+    Tile(Tile)
+}
+
+pub enum MinusPoints {
+    FirstPlayerToken,
+    Tile(Tile)
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Tile {
+    Blue,
+    Green,
+    Red,
+    White,
+    Yellow,
+}
+
+impl Debug for Tile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.to_string();
+        write!(f, "{}", s)
     }
 }
 
-#[derive(Default)]
-pub struct Card {
-    state: CardState,
-    effects_basic: Vec<CardEffect>,
-    effects_upgraded: Vec<CardEffect>,
-}
-
-#[derive(Default)]
-pub struct Resources {
-    oil: u8,
-    steel: u8,
-    coal: u8,
-}
-
-pub struct Game {
-    auction_house: Rc<RefCell<AuctionHouse>>,
-    players: Vec<Rc<RefCell<Player>>>,
-}
-
-impl Game {
-    pub fn new(
-        auction_house: Rc<RefCell<AuctionHouse>>,
-        players: Vec<Rc<RefCell<Player>>>,
-    ) -> Self {
-        Self {
-            auction_house,
-            players,
-        }
-    }
-
-    pub fn handle_app_event(&mut self, event: AppEvent) {
-        match event {
-            AppEvent::TokenPlaced => todo!(),
-            AppEvent::CardDrawn => {
-                self.auction_house.borrow_mut().add_card(Card::default());
-            }
+impl Distribution<Tile> for Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Tile {
+        match rng.gen_range(0..=4) {
+            0 => Tile::Yellow,
+            1 => Tile::Red,
+            2 => Tile::Blue,
+            3 => Tile::Green,
+            _ => Tile::White,
         }
     }
 }
 
-#[derive(Default)]
-pub struct AuctionHouse {
-    cards: Vec<Card>,
-}
-
-impl AuctionHouse {
-    pub fn num_of_cards(&self) -> usize {
-        self.cards.len()
-    }
-
-    pub fn add_card(&mut self, card: Card) {
-        self.cards.push(card)
+impl ToString for Tile {
+    fn to_string(&self) -> String {
+        match self {
+            Tile::Yellow => "Y",
+            Tile::Red => "R",
+            Tile::Blue => "B",
+            Tile::Green => "G",
+            Tile::White => "W"
+        }.into()
     }
 }
 
-pub enum AppEvent {
-    TokenPlaced,
-    CardDrawn,
+pub enum Pickable {
+    FirstPlayerToken,
+    Tile(Tile)
+}
+
+impl ToString for Pickable {
+    fn to_string(&self) -> String {
+        match self {
+            Pickable::FirstPlayerToken => String::from("1"),
+            Pickable::Tile(t) => t.to_string()
+        }
+    }
+}
+
+pub struct CommonArea(Vec<Pickable>);
+
+pub struct Factory(pub [Tile; 4]);
+
+impl Factory {
+    pub fn new_random() -> Self {
+        let tiles: [Tile; 4] = [
+            rand::random(),
+            rand::random(),
+            rand::random(),
+            rand::random(),
+        ];
+        Self(tiles)
+    }
+}
+
+struct Game<const N: usize> {
+    players: [Player; N]
+}
+
+struct BuildingArea([PatternLine; 5]);
+
+struct PatternLine {
+    state: PatternState,
+    length: u8
+}
+
+enum PatternState {
+    Free,
+    Taken(Tile, u8)
 }

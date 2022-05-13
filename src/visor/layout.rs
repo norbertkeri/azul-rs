@@ -13,6 +13,12 @@ pub struct Layout {
     components: Components,
 }
 
+impl From<Layout> for Box<dyn Component> {
+    fn from(s: Layout) -> Self {
+        Box::new(s)
+    }
+}
+
 impl Layout {
     pub fn new(direction: Direction, padding: u8, components: Components) -> Self {
         Self {
@@ -79,6 +85,6 @@ impl Component for Layout {
     }
 
     fn handle(&mut self, _event: &super::UserInput) -> UserEventHandled {
-        todo!()
+        UserEventHandled::Noop
     }
 }

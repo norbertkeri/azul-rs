@@ -1,14 +1,88 @@
-use furnace::visor::{view::{Panel, TextView, PanelDimensions}};
+use furnace::visor::view::{PanelBuilder, TextView};
 
 use crate::helpers::expect_component;
 
 #[test]
 fn test_oneline_panel() {
     let hello = TextView::new(String::from("Hello"));
-    let panel = Panel::new("Hello".into(), 0, PanelDimensions::ShrinkWrap, Box::new(hello));
+    let panel = PanelBuilder::default()
+        .component(Box::new(hello))
+        .build()
+        .unwrap();
+    let expected = r#"
+┌─────┐
+│Hello│
+└─────┘"#
+        .trim_start();
+    expect_component(panel, expected);
+}
+
+#[test]
+fn test_panel_with_padding() {
+    let hello = TextView::new(String::from("Hello"));
+    let panel = PanelBuilder::default()
+        .component(Box::new(hello))
+        .padding(1)
+        .build()
+        .unwrap();
     let expected = r#"
 ┌───────┐
+│       │
 │ Hello │
-└───────┘"#.trim_start();
+│       │
+└───────┘"#
+        .trim_start();
+    expect_component(panel, expected);
+}
+
+#[test]
+fn test_panel_with_longer_title_than_content_should_expand_width() {
+    let hello = TextView::new(String::from("Hello"));
+    let panel = PanelBuilder::default()
+        .component(Box::new(hello))
+        .name("Very long title")
+        .build()
+        .unwrap();
+    let expected = r#"
+┌| Very long title |┐
+│Hello              │
+└───────────────────┘"#
+        .trim_start();
+    expect_component(panel, expected);
+}
+
+#[test]
+fn test_panel_with_name_odd() {
+    let hello = TextView::new(String::from("Hello world"));
+    let panel = PanelBuilder::default()
+        .component(Box::new(hello))
+        .name("x")
+        .build()
+        .unwrap();
+    let expected = r#"
+┌───| x |───┐
+│Hello world│
+└───────────┘"#
+        .trim_start();
+    expect_component(panel, expected);
+}
+
+/*
+* Test if the panel has an even number of character, but the box width is uneven, the
+* title becomes slightly off center, but it still lines up with the borders.
+*/
+#[test]
+fn test_panel_with_name_even() {
+    let hello = TextView::new(String::from("Hello world"));
+    let panel = PanelBuilder::default()
+        .component(Box::new(hello))
+        .name("xx")
+        .build()
+        .unwrap();
+    let expected = r#"
+┌──| xx |───┐
+│Hello world│
+└───────────┘"#
+        .trim_start();
     expect_component(panel, expected);
 }

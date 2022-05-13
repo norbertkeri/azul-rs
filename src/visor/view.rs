@@ -1,9 +1,16 @@
-use crate::visor::{Coords, terminal_writer::RootedRenderer};
+use crate::visor::{terminal_writer::RootedRenderer, Coords};
+use derive_builder::Builder;
 
 use super::{terminal_writer::TerminalBackend, Component};
 
 pub struct TextView {
     contents: String,
+}
+
+impl From<TextView> for Box<dyn Component> {
+    fn from(s: TextView) -> Self {
+        Box::new(s)
+    }
 }
 
 impl<S: ToString> From<S> for TextView {
@@ -15,6 +22,10 @@ impl<S: ToString> From<S> for TextView {
 impl TextView {
     pub fn new(contents: String) -> Self {
         Self { contents }
+    }
+
+    pub fn update_contents(&mut self, contents: String) {
+        self.contents = contents;
     }
 }
 
@@ -49,37 +60,50 @@ pub enum PanelDimensions {
     ShrinkWrap,
 }
 
+#[derive(Builder)]
+#[builder(pattern = "owned")]
 pub struct Panel {
-    name: String,
-    padding: u8,
+    #[builder(setter(into, strip_option), default)]
+    name: Option<String>,
+    #[builder(default)]
+    padding: u16,
+    #[builder(default = "PanelDimensions::ShrinkWrap")]
     dimensions: PanelDimensions,
     component: Box<dyn Component>,
 }
 
-impl Panel {
-    pub fn new(name: String, padding: u8, dimensions: PanelDimensions, component: Box<dyn Component>) -> Self {
-        if let PanelDimensions::Static(w, h) = dimensions {
-            let (c_w, c_h) = component.declare_dimensions();
-            if c_w < w || c_h < h {
-                panic!("You cannot make a panel with a static size ({}x{}), that is smaller than the enclosing component {}x{}", w, h, c_w, c_h);
-            }
-        }
-        Self {
-            name,
-            padding,
-            dimensions,
-            component,
-        }
+impl From<Panel> for Box<dyn Component> {
+    fn from(val: Panel) -> Self {
+        Box::new(val)
     }
 }
 
 impl Component for Panel {
+    /**
+     * Calculate total length of component, by:
+     * Base length + 2*padding, + 2 for borders
+     */
     fn declare_dimensions(&self) -> (u16, u16) {
-        let base = match self.dimensions {
+        let title_length: u16 = self
+            .name
+            .as_ref()
+            .map(|x| x.len())
+            .map(TryInto::try_into)
+            .map(|x| x.unwrap_or(0))
+            .unwrap_or(0);
+
+        let mut base = match self.dimensions {
             PanelDimensions::Static(w, h) => (w, h),
             PanelDimensions::ShrinkWrap => self.component.declare_dimensions(),
         };
-        (base.0 + 4, base.1 + 4)
+        if base.0 < title_length + 4 {
+            base.0 = title_length + 4;
+        }
+        let (vertical_padding, horizontal_padding) = (self.padding, self.padding);
+        (
+            base.0 + (horizontal_padding * 2) + 2,
+            base.1 + (vertical_padding * 2) + 2,
+        )
     }
 
     fn handle(&mut self, e: &super::UserInput) -> super::UserEventHandled {
@@ -87,24 +111,61 @@ impl Component for Panel {
     }
 
     fn render(&self, writer: &mut dyn TerminalBackend) {
-        let padding = 1;
         let (w, h) = self.declare_dimensions();
-        writer.write("┌");
-        writer.write(&"─".repeat((w - 2).into()));
-        writer.write("┐");
-        let subroot = writer.get_root() + Coords(1 + padding, 1);
+        self.draw_header(writer);
+
+        let (vertical_padding, horizontal_padding) = (self.padding, self.padding);
+
+        for i in 1..=vertical_padding {
+            writer.reset_cursor();
+            writer.set_cursor_to(Coords(1, 1 + i));
+            writer.write("│");
+            writer.set_cursor_to(Coords(w, 1 + i));
+            writer.write("│");
+        }
+
+        let subroot = writer.get_root() + Coords(1 + horizontal_padding, 1 + vertical_padding);
         let mut rooted = RootedRenderer::new(writer, subroot);
         rooted.reset_cursor();
         self.component.render(&mut rooted);
-        for i in 2..(h-2) {
+        for i in (2 + vertical_padding)..=(h - 1) {
             writer.set_cursor_to(Coords(1, i));
             writer.write("│");
             writer.set_cursor_to(Coords(w, i));
             writer.write("│");
         }
-        writer.set_cursor_to(Coords(1, h-2));
+        writer.set_cursor_to(Coords(1, h));
         writer.write("└");
         writer.write(&"─".repeat((w - 2).into()));
         writer.write("┘");
+    }
+}
+
+impl Panel {
+    fn draw_header(&self, writer: &mut dyn TerminalBackend) {
+        let (w, _h) = self.declare_dimensions();
+        writer.write("┌");
+        match &self.name {
+            Some(name) => {
+                // total length - (two || characters with spaces + length of title) - panel borders / 2
+                let width = (w - (4 + name.len() as u16) - 2) / 2;
+                writer.write(&format!(
+                    "{}| {} |{}",
+                    "─".repeat(width.into()),
+                    name,
+                    "─".repeat(width.into())
+                ));
+                /* If the name of the panel has even characters, and the width of the box is odd (or vice versa, they don't
+                 * match), we have to add an extra -, otherwise the top line won't line up with the bottom.
+                 * This will make the title slightly off center, nothing we can do here.
+                 * I'm going to add an extra - on the right side.
+                 */
+                if w as usize % 2 != name.len() % 2 {
+                    writer.write("─");
+                }
+            }
+            None => writer.write(&"─".repeat((w - 2).into())),
+        }
+        writer.write("┐");
     }
 }
