@@ -15,6 +15,7 @@ pub struct Wall {
 }
 
 #[derive(Debug, PartialEq)]
+#[must_use]
 pub enum FillResult {
     PointsGained(u8),
     PointsGainedAndGameOver(u8),
@@ -238,7 +239,7 @@ mod tests {
             }
             for (_i, (row, col)) in steps {
                 let tile = wall.find_tile_for(row, col);
-                wall.fill_slot(row, tile);
+                let _ = wall.fill_slot(row, tile);
             }
             wall
         }

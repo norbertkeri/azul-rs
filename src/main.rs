@@ -45,7 +45,10 @@ fn main() {
             _ => None,
         };
         if let Some(appevent) = e {
-            game.borrow_mut().handle(appevent);
+            let is_over = game.borrow_mut().handle(appevent);
+            if is_over {
+                break;
+            }
         }
         engine.render();
     }

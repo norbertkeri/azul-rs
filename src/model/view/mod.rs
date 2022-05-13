@@ -235,9 +235,12 @@ impl<const N: usize> Component for GameView<N> {
                     Box::new(player_area),
                     Box::new(Layout::horizontal(
                         1,
-                        vec![Box::new(factory_area), Box::new(Layout::vertical(1, vec![Box::new(common_area),
-                        Box::new(score_view)]))
-
+                        vec![
+                            Box::new(factory_area),
+                            Box::new(Layout::vertical(
+                                1,
+                                vec![Box::new(common_area), Box::new(score_view)],
+                            )),
                         ],
                     )),
                 ],

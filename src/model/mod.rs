@@ -12,6 +12,7 @@ use std::{
 
 use self::bag::Bag;
 
+use self::buildingarea::IsGameOver;
 use self::tilecollection::{HasTileCollection, TileCollection};
 use self::view::render_pickables;
 
@@ -182,7 +183,7 @@ impl CommonArea {
     }
 
     pub fn add(&mut self, tiles: &[Tile]) {
-        let mut tiles = tiles.iter().copied().collect();
+        let mut tiles = tiles.to_vec();
         self.0.append(&mut tiles);
         self.0.sort();
     }
@@ -326,6 +327,7 @@ pub struct Game<const N: usize> {
     factories: Vec<Factory>,
     state: GameState,
     bag: Bag,
+    is_over: bool,
     pub(crate) common_area: CommonArea,
 }
 
@@ -406,6 +408,7 @@ impl<const N: usize> Game<N> {
                 player_id: 0,
                 current_source: TileSource::Factory(0.into()),
             },
+            is_over: false,
             bag,
             common_area: CommonArea::default(),
         }
@@ -434,7 +437,7 @@ impl<const N: usize> Game<N> {
         rows.scroll(current_row, direction)
     }
 
-    pub fn handle(&mut self, e: AppEvent) {
+    pub fn handle(&mut self, e: AppEvent) -> bool {
         let new_e = match e {
             AppEvent::Select(dir) => match self.state {
                 GameState::PickSource {
@@ -509,7 +512,7 @@ impl<const N: usize> Game<N> {
                 if first_that_can_fit.is_none() {
                     todo!("No rows can fit the tiles, all should go to the floorline");
                 }
-                let (selected_row_id, _) = *first_that_can_fit.unwrap();
+                let selected_row_id = *first_that_can_fit.unwrap();
                 GameState::PickRowToPutTiles {
                     player_id,
                     source,
@@ -539,6 +542,7 @@ impl<const N: usize> Game<N> {
         };
 
         self.state = new_e;
+        self.is_over
     }
 
     fn reset_first_player_token(&mut self) -> usize {
@@ -557,7 +561,7 @@ impl<const N: usize> Game<N> {
 
     fn advance_round(&mut self) -> GameState {
         let next_player = self.reset_first_player_token();
-        self.flush_tiles();
+        self.is_over = self.flush_tiles().into();
         self.refill_factories();
         GameState::PickSource {
             player_id: next_player,
@@ -565,12 +569,16 @@ impl<const N: usize> Game<N> {
         }
     }
 
-    fn flush_tiles(&mut self) {
+    fn flush_tiles(&mut self) -> IsGameOver {
+        let mut is_game_over = IsGameOver::No;
         for p in self.players.iter_mut() {
             let bg = p.get_buildingarea_mut();
-            bg.move_tiles_to_wall();
+            if let IsGameOver::Yes = bg.move_tiles_to_wall() {
+                is_game_over = IsGameOver::Yes;
+            }
             bg.flush_floorline();
         }
+        is_game_over
     }
 
     fn refill_factories(&mut self) {

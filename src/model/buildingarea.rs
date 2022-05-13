@@ -1,17 +1,17 @@
 use crate::visor::{
     layout::Layout,
     renderer::{self, RootedRenderer},
-    Component, view::Panel,
     view::{PanelBuilder, TextView},
+    Component,
 };
 
 use self::{
     floorline::{FloorLine, FloorLineView},
     patternline::{PatternLine, PatternLineView},
-    wall::{Wall, WallView},
+    wall::{FillResult, Wall, WallView},
 };
 
-use super::{CommonArea, Factory, Tile, player::Player};
+use super::{player::Player, CommonArea, Factory, Tile, TileSource};
 
 pub mod floorline;
 pub mod patternline;
@@ -42,14 +42,33 @@ impl Default for BuildingArea {
     }
 }
 
+#[must_use]
+pub enum IsGameOver {
+    Yes,
+    No,
+}
+
+impl From<IsGameOver> for bool {
+    fn from(val: IsGameOver) -> Self {
+        match val {
+            IsGameOver::Yes => true,
+            IsGameOver::No => false,
+        }
+    }
+}
+
 impl BuildingArea {
-    pub(super) fn move_tiles_to_wall(&mut self) {
+    pub(super) fn move_tiles_to_wall(&mut self) -> IsGameOver {
+        let mut is_game_over = IsGameOver::No;
         for (i, pl) in &mut self.in_progress.iter_mut().enumerate() {
             if pl.is_full() {
                 let tile = pl.flush();
-                self.wall.fill_slot(i, tile);
+                if let FillResult::PointsGainedAndGameOver(_) = self.wall.fill_slot(i, tile) {
+                    is_game_over = IsGameOver::Yes;
+                }
             }
         }
+        is_game_over
     }
 
     pub fn flush_floorline(&mut self) {
@@ -68,11 +87,12 @@ impl BuildingArea {
         &self.in_progress
     }
 
-    pub fn get_rows_that_can_accept(&self, tile: Tile) -> Vec<(usize, &PatternLine)> {
+    pub fn get_rows_that_can_accept(&self, tile: Tile) -> Vec<usize> {
         self.in_progress
             .iter()
             .enumerate()
             .filter(move |&(i, _p)| self.can_accept(tile, i))
+            .map(|(i, _p)| i)
             .collect()
     }
 
@@ -208,11 +228,13 @@ impl<'a> Component for InProgressView<'a> {
 }
 
 pub struct ScoreView<'a> {
-    players: &'a [Player]
+    players: &'a [Player],
 }
 
 impl<'a> ScoreView<'a> {
-    pub fn new(players: &'a [Player]) -> Self { Self { players } }
+    pub fn new(players: &'a [Player]) -> Self {
+        Self { players }
+    }
 }
 
 impl<'a> Component for ScoreView<'a> {
@@ -235,6 +257,8 @@ impl<'a> Component for ScoreView<'a> {
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {
-        (10, self.players.len().try_into().unwrap())
+        let mut height: u16 = self.players.len().try_into().unwrap();
+        height += 2;
+        (10, height)
     }
 }

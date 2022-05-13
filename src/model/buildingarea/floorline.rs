@@ -33,6 +33,7 @@ impl FloorLine {
         }
     }
 
+    #[must_use]
     pub fn add_tiles(&mut self, tiles: &[Tile]) -> Vec<Tile> {
         let mut remaining = tiles.to_vec();
 
