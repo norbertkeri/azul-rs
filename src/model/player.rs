@@ -38,18 +38,29 @@ impl Player {
 }
 
 #[derive(Debug)]
-enum Slot {
+pub enum Slot {
     Filled(Tile),
     Free(Tile),
 }
 
 const AREA_LENGTH: usize = 5;
 
-pub struct TilingArea {
+pub struct Wall {
     slots: [[Slot; AREA_LENGTH]; AREA_LENGTH],
 }
 
-impl Default for TilingArea {
+impl Wall {
+    pub fn find_slot_for_tile(&self, what: Tile, row_number: usize) -> &Slot {
+        self.slots[row_number]
+            .iter()
+            .find(|&slot| match slot {
+                Slot::Filled(tile) | Slot::Free(tile) => tile == &what,
+            })
+            .unwrap()
+    }
+}
+
+impl Default for Wall {
     fn default() -> Self {
         let slots: Vec<_> = (0..5)
             .map(|i| {
@@ -70,19 +81,19 @@ impl Default for TilingArea {
     }
 }
 
-pub struct TilingAreaView<'a> {
-    tiling_area: &'a TilingArea,
+pub struct WallView<'a> {
+    wall: &'a Wall,
 }
 
-impl<'a> TilingAreaView<'a> {
-    pub fn new(tiling_area: &'a TilingArea) -> Self {
-        Self { tiling_area }
+impl<'a> WallView<'a> {
+    pub fn new(wall: &'a Wall) -> Self {
+        Self { wall }
     }
 }
 
-impl<'a> Component for TilingAreaView<'a> {
+impl<'a> Component for WallView<'a> {
     fn render(&self, writer: &mut renderer::RootedRenderer) {
-        for (i, row) in self.tiling_area.slots.iter().enumerate() {
+        for (i, row) in self.wall.slots.iter().enumerate() {
             for t in row.iter() {
                 match t {
                     Slot::Filled(_tile) => writer.write("X"),
@@ -102,16 +113,15 @@ type InProgress = [PatternLine; 5];
 
 pub struct BuildingArea {
     in_progress: InProgress,
-    tiling_area: TilingArea,
+    wall: Wall,
 }
 
 impl BuildingArea {
     pub fn new() -> Self {
         let in_progress = [1, 2, 3, 4, 5].map(PatternLine::new_free);
-        let tiling_area = Default::default();
         Self {
             in_progress,
-            tiling_area,
+            wall: Default::default(),
         }
     }
 
@@ -135,8 +145,19 @@ impl BuildingArea {
         self.in_progress
             .iter()
             .enumerate()
-            .filter(move |(_i, p)| p.can_accept(tile, how_many))
+            .filter(move |&(i, _p)| self.can_accept(tile, how_many, i))
             .collect()
+    }
+
+    pub fn can_accept(&self, what: Tile, how_many: usize, row_number: usize) -> bool {
+        // Is the tile already filled on the right side?
+        match self.wall.find_slot_for_tile(what, row_number) {
+            Slot::Filled(_) => false,
+            Slot::Free(_) => {
+                // Does the patternline have enough room for this color?
+                self.in_progress[row_number].can_accept(what, how_many)
+            }
+        }
     }
 }
 
@@ -169,7 +190,7 @@ impl<'a> Component for BuildingAreaView<'a> {
                     self.selected,
                     self.buildingarea.get_rows(),
                 )),
-                Box::new(TilingAreaView::new(&self.buildingarea.tiling_area)),
+                Box::new(WallView::new(&self.buildingarea.wall)),
             ],
         );
         panel.render(writer);
