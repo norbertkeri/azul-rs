@@ -24,21 +24,9 @@ pub mod view;
 
 pub enum AppEvent {
     Select(Direction),
-    TransitionToPickTileFromFactory {
-        source: TileSource,
-        tile: Tile,
-    },
-    TransitionToPickRow {
-        player_id: usize,
-        source: TileSource,
-        tile: Tile,
-    },
-    PlaceTiles {
-        player_id: usize,
-        source: TileSource,
-        tile: Tile,
-        row_id: usize,
-    },
+    TransitionToPickTileFromFactory { tile: Tile },
+    TransitionToPickRow { tile: Tile },
+    PlaceTiles { tile: Tile, row_id: usize },
 }
 
 pub trait Scrollable<T> {
@@ -226,16 +214,15 @@ impl<'a> CommonAreaView<'a> {
 impl<'a, const N: usize> From<&'a Game<N>> for CommonAreaView<'a> {
     fn from(game: &'a Game<N>) -> Self {
         let state = match game.state {
-            GameState::PickSource { current_source, .. } => match current_source {
+            GameState::PickSource => match game.current_source {
                 TileSource::Factory(_) => CommonAreaStateView::Passive,
                 TileSource::CommonArea => CommonAreaStateView::Selected,
             },
-            GameState::PickRowToPutTiles { source, tile, .. }
+            GameState::PickRowToPutTiles { tile, .. }
             | GameState::PickTileFromSource {
-                current_source: source,
                 selected_tile: tile,
                 ..
-            } => match source {
+            } => match game.current_source {
                 TileSource::Factory(_) => CommonAreaStateView::Passive,
                 TileSource::CommonArea => CommonAreaStateView::SelectedWithTile(tile),
             },
@@ -329,6 +316,8 @@ pub struct Game<const N: usize> {
     bag: Bag,
     is_over: bool,
     pub(crate) common_area: CommonArea,
+    player_id: usize,
+    current_source: TileSource,
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Ord, PartialOrd, Hash)]
@@ -404,13 +393,12 @@ impl<const N: usize> Game<N> {
         Game {
             players,
             factories,
-            state: GameState::PickSource {
-                player_id: 0,
-                current_source: TileSource::Factory(0.into()),
-            },
+            state: GameState::PickSource,
             is_over: false,
             bag,
             common_area: CommonArea::default(),
+            player_id: 0,
+            current_source: TileSource::Factory(0.into()),
         }
     }
 
@@ -440,25 +428,16 @@ impl<const N: usize> Game<N> {
     pub fn handle(&mut self, e: AppEvent) -> bool {
         let new_e = match e {
             AppEvent::Select(dir) => match self.state {
-                GameState::PickSource {
-                    player_id,
-                    current_source: current_factory,
-                } => {
+                GameState::PickSource => {
                     let pickable_factories = self.find_pickable_sources();
                     let next_factory_id = pickable_factories
-                        .scroll(current_factory, dir)
-                        .unwrap_or(current_factory);
-                    GameState::PickSource {
-                        player_id,
-                        current_source: next_factory_id,
-                    }
+                        .scroll(self.current_source, dir)
+                        .unwrap_or(self.current_source);
+                    self.current_source = next_factory_id;
+                    GameState::PickSource
                 }
-                GameState::PickTileFromSource {
-                    player_id,
-                    current_source,
-                    selected_tile,
-                } => {
-                    let next_tile = match current_source {
+                GameState::PickTileFromSource { selected_tile } => {
+                    let next_tile = match self.current_source {
                         TileSource::Factory(factory_id) => {
                             self.factories[factory_id].find_adjacent_tile(selected_tile, dir)
                         }
@@ -467,46 +446,31 @@ impl<const N: usize> Game<N> {
                         }
                     };
                     GameState::PickTileFromSource {
-                        player_id,
-                        current_source,
                         selected_tile: next_tile,
                     }
                 }
                 GameState::PickRowToPutTiles {
-                    player_id,
-                    source,
                     tile,
                     selected_row_id,
                 } => {
                     let selected_row_id = self
-                        .find_adjacent_selectable_row(tile, player_id, selected_row_id, dir)
+                        .find_adjacent_selectable_row(tile, self.player_id, selected_row_id, dir)
                         .unwrap_or(selected_row_id);
                     GameState::PickRowToPutTiles {
-                        source,
-                        player_id,
                         tile,
                         selected_row_id,
                     }
                 }
             },
-            AppEvent::TransitionToPickTileFromFactory { source: _, tile } => match self.state {
-                GameState::PickSource {
-                    player_id,
-                    current_source: current_factory,
-                } => GameState::PickTileFromSource {
-                    player_id,
-                    current_source: current_factory,
+            AppEvent::TransitionToPickTileFromFactory { tile } => match self.state {
+                GameState::PickSource => GameState::PickTileFromSource {
                     selected_tile: tile,
                 },
                 GameState::PickTileFromSource { .. } => panic!("Cannot happen"),
                 GameState::PickRowToPutTiles { .. } => panic!("Cannot happen"),
             },
-            AppEvent::TransitionToPickRow {
-                player_id,
-                source,
-                tile,
-            } => {
-                let buildingarea = self.get_players()[player_id].get_buildingarea();
+            AppEvent::TransitionToPickRow { tile } => {
+                let buildingarea = self.get_players()[self.player_id].get_buildingarea();
                 let rows = buildingarea.get_rows_that_can_accept(tile);
                 let first_that_can_fit = rows.first();
                 if first_that_can_fit.is_none() {
@@ -514,27 +478,20 @@ impl<const N: usize> Game<N> {
                 }
                 let selected_row_id = *first_that_can_fit.unwrap();
                 GameState::PickRowToPutTiles {
-                    player_id,
-                    source,
                     tile,
                     selected_row_id,
                 }
             }
-            AppEvent::PlaceTiles {
-                player_id,
-                source,
-                tile,
-                row_id,
-            } => {
-                self.pick(source, tile, player_id, row_id).unwrap();
+            AppEvent::PlaceTiles { tile, row_id } => {
+                self.pick(self.current_source, tile, self.player_id, row_id)
+                    .unwrap();
 
                 let pickable_sources = self.find_pickable_sources();
                 let next_source = pickable_sources.first();
                 if let Some(next_source) = next_source {
-                    GameState::PickSource {
-                        player_id: (N - 1) - player_id,
-                        current_source: *next_source,
-                    }
+                    self.player_id = (N - 1) - self.player_id;
+                    self.current_source = *next_source;
+                    GameState::PickSource
                 } else {
                     self.advance_round()
                 }
@@ -563,10 +520,9 @@ impl<const N: usize> Game<N> {
         let next_player = self.reset_first_player_token();
         self.is_over = self.flush_tiles().into();
         self.refill_factories();
-        GameState::PickSource {
-            player_id: next_player,
-            current_source: TileSource::Factory(FactoryId(0)),
-        }
+        self.player_id = next_player;
+        self.current_source = TileSource::Factory(FactoryId(0));
+        GameState::PickSource
     }
 
     fn flush_tiles(&mut self) -> IsGameOver {
@@ -595,7 +551,7 @@ impl<const N: usize> Game<N> {
         row_id: usize,
     ) -> Result<(), String> {
         let buildingarea = self.players[player_id].get_buildingarea_mut();
-        match source {
+        let remaining = match source {
             TileSource::Factory(factory_id) => {
                 let factory = &mut self.factories[factory_id];
                 buildingarea.pick_factory(factory, &mut self.common_area, row_id, tile)
@@ -604,7 +560,9 @@ impl<const N: usize> Game<N> {
                 let (count, has_firstplayer) = self.common_area.pick_tile(tile);
                 buildingarea.pick_from_common_area(row_id, tile, count, has_firstplayer)
             }
-        }
+        }?;
+        self.bag.discard(&remaining);
+        Ok(())
     }
 
     pub fn find_source(&self, source: TileSource) -> Box<dyn TileCollection> {
@@ -616,21 +574,9 @@ impl<const N: usize> Game<N> {
 }
 
 pub enum GameState {
-    PickSource {
-        player_id: usize,
-        current_source: TileSource,
-    },
-    PickTileFromSource {
-        player_id: usize,
-        current_source: TileSource,
-        selected_tile: Tile,
-    },
-    PickRowToPutTiles {
-        player_id: usize,
-        source: TileSource,
-        tile: Tile,
-        selected_row_id: usize,
-    },
+    PickSource,
+    PickTileFromSource { selected_tile: Tile },
+    PickRowToPutTiles { tile: Tile, selected_row_id: usize },
 }
 
 impl GameState {

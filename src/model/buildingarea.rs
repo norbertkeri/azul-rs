@@ -11,7 +11,7 @@ use self::{
     wall::{FillResult, Wall, WallView},
 };
 
-use super::{player::Player, CommonArea, Factory, Tile, TileSource};
+use super::{player::Player, CommonArea, Factory, Tile};
 
 pub mod floorline;
 pub mod patternline;
@@ -111,13 +111,14 @@ impl BuildingArea {
         &self.floorline
     }
 
+    // Returns the tiles that did fit nor into the patternline, nor into the floorline
     pub fn pick_factory(
         &mut self,
         factory: &mut Factory,
         common_area: &mut CommonArea,
         row_number: usize,
         picked_tile: Tile,
-    ) -> Result<(), String> {
+    ) -> Result<Vec<Tile>, String> {
         let tiles = factory
             .0
             .as_ref()
@@ -135,17 +136,18 @@ impl BuildingArea {
         let remaining = pattern_line.accept(picked_tile, picked.len())?;
         common_area.add(&non_picked);
         factory.0 = None;
-        self.floorline.add_tiles(&vec![picked_tile; remaining]);
-        Ok(())
+        let remaining = self.floorline.add_tiles(&vec![picked_tile; remaining]);
+        Ok(remaining)
     }
 
+    // Returns the tiles that did fit nor into the patternline, nor into the floorline
     pub fn pick_from_common_area(
         &mut self,
         row_number: usize,
         picked_tile: Tile,
         how_many: usize,
         first_player: bool,
-    ) -> Result<(), String> {
+    ) -> Result<Vec<Tile>, String> {
         let pattern_line = &mut self.in_progress[row_number];
         let remaining = pattern_line.accept(picked_tile, how_many)?;
         let mut to_floor = vec![picked_tile; remaining];
@@ -153,8 +155,8 @@ impl BuildingArea {
             to_floor.push(Tile::FirstPlayer);
         }
 
-        self.floorline.add_tiles(&to_floor);
-        Ok(())
+        let remaining = self.floorline.add_tiles(&to_floor);
+        Ok(remaining)
     }
 }
 

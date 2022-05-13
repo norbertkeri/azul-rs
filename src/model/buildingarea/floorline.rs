@@ -92,7 +92,7 @@ mod tests {
     #[test]
     fn test_calculate_minus_points() {
         let mut fl = FloorLine::default();
-        fl.add_tiles(&[Tile::Yellow; 7]);
+        let _ = fl.add_tiles(&[Tile::Yellow; 7]);
         assert_eq!(fl.calculate_minus_points(), 14);
     }
 
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn test_correct_tiles_are_returned() {
         let mut fl = FloorLine::default();
-        fl.add_tiles(&[Tile::Yellow; 6]);
+        let _ = fl.add_tiles(&[Tile::Yellow; 6]);
         let remaining = fl.add_tiles(&[Tile::Red, Tile::Blue, Tile::Green]);
         assert_eq!(remaining, vec![Tile::Blue, Tile::Green]);
     }

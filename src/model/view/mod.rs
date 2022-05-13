@@ -149,22 +149,17 @@ struct FactoryAreaView<'a> {
 impl<'a, const N: usize> From<&'a Game<N>> for FactoryAreaView<'a> {
     fn from(game: &'a Game<N>) -> Self {
         let factory_state = match game.state {
-            GameState::PickSource { current_source, .. } => match current_source {
+            GameState::PickSource => match game.current_source {
                 super::TileSource::Factory(factory_id) => {
                     FactoryAreaState::SelectFactory(factory_id)
                 }
                 super::TileSource::CommonArea => FactoryAreaState::Passive,
             },
-            GameState::PickTileFromSource {
-                selected_tile,
-                current_source,
-                ..
-            }
+            GameState::PickTileFromSource { selected_tile, .. }
             | GameState::PickRowToPutTiles {
                 tile: selected_tile,
-                source: current_source,
                 ..
-            } => match current_source {
+            } => match game.current_source {
                 super::TileSource::Factory(factory_id) => FactoryAreaState::SelectTile {
                     factory_id,
                     tile: selected_tile,
@@ -275,37 +270,23 @@ impl<const N: usize> Component for GameView<N> {
                 },
             },
             UserInput::Confirm => match game.state {
-                GameState::PickSource {
-                    player_id: _,
-                    current_source,
-                } => {
-                    let source = self.game.borrow().find_source(current_source);
+                GameState::PickSource => {
+                    let source = game.find_source(game.current_source);
                     let tile = source
                         .find_first_tile()
                         .expect("You managed to pick a source that has no tiles?");
 
-                    UserEventHandled::AppEvent(AppEvent::TransitionToPickTileFromFactory {
-                        source: current_source,
-                        tile,
+                    UserEventHandled::AppEvent(AppEvent::TransitionToPickTileFromFactory { tile })
+                }
+                GameState::PickTileFromSource { selected_tile } => {
+                    UserEventHandled::AppEvent(AppEvent::TransitionToPickRow {
+                        tile: selected_tile,
                     })
                 }
-                GameState::PickTileFromSource {
-                    player_id,
-                    current_source,
-                    selected_tile,
-                } => UserEventHandled::AppEvent(AppEvent::TransitionToPickRow {
-                    player_id,
-                    tile: selected_tile,
-                    source: current_source,
-                }),
                 GameState::PickRowToPutTiles {
-                    player_id,
-                    source,
                     tile,
                     selected_row_id,
                 } => UserEventHandled::AppEvent(AppEvent::PlaceTiles {
-                    player_id,
-                    source,
                     tile,
                     row_id: selected_row_id,
                 }),
