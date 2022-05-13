@@ -176,20 +176,16 @@ impl<'a> BuildingAreaView<'a> {
 
 impl<'a> Component for BuildingAreaView<'a> {
     fn render(&self, writer: &mut RootedRenderer) {
-        let panel = Layout::vertical(
-            vec![
-                Box::new(Layout::horizontal(
-                    vec![
-                        Box::new(InProgressView::new(
-                            self.selected,
-                            self.buildingarea.get_rows(),
-                        )),
-                        Box::new(WallView::new(&self.buildingarea.wall)),
-                    ],
+        let panel = Layout::vertical(vec![
+            Box::new(Layout::horizontal(vec![
+                Box::new(InProgressView::new(
+                    self.selected,
+                    self.buildingarea.get_rows(),
                 )),
-                Box::new(FloorLineView::new(self.buildingarea.get_floorline())),
-            ],
-        );
+                Box::new(WallView::new(&self.buildingarea.wall)),
+            ])),
+            Box::new(FloorLineView::new(self.buildingarea.get_floorline())),
+        ]);
         panel.render(writer);
     }
 }

@@ -69,17 +69,13 @@ fn test_layout_rendering<const N: usize>(
 
 #[test]
 fn test_mixed_layouts() {
-    let layout = Layout::vertical(
-        vec![
-            Box::new(TextView::from("v1")),
-            Box::new(Layout::horizontal(
-                vec![
-                    Box::new(TextView::from("h1")),
-                    Box::new(TextView::from("h2")),
-                ],
-            )),
-        ],
-    );
+    let layout = Layout::vertical(vec![
+        Box::new(TextView::from("v1")),
+        Box::new(Layout::horizontal(vec![
+            Box::new(TextView::from("h1")),
+            Box::new(TextView::from("h2")),
+        ])),
+    ]);
     let expected = r#"
 v1
 h1h2

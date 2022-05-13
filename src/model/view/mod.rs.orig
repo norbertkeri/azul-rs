@@ -18,12 +18,24 @@ pub struct TileView {
     pub selected: bool,
 }
 
+<<<<<<< HEAD
 impl From<TileView> for Box<dyn Component> {
     fn from(s: TileView) -> Self {
         Box::new(s)
     }
 }
 
+||||||| parent of b4bdf1f (wip)
+/*
+impl From<TileView> for Box<dyn Component> {
+    fn from(s: TileView) -> Self {
+        Box::new(s)
+    }
+}
+*/
+
+=======
+>>>>>>> b4bdf1f (wip)
 impl TileView {
     pub fn new(tile: Tile, selected: bool) -> Self {
         Self { tile, selected }
@@ -198,16 +210,19 @@ impl<const N: usize> Component for GameView<N> {
         let score_view = ScoreView::new(game.get_players());
 
         let gameview = PanelBuilder::default()
-            .component(Box::new(Layout::vertical(vec![
-                Box::new(player_area),
-                Box::new(Layout::horizontal(vec![
-                    Box::new(factory_area),
-                    Box::new(Layout::vertical(vec![
-                        Box::new(common_area),
-                        Box::new(score_view),
-                    ])),
-                ])),
-            ])))
+            .component(Box::new(Layout::vertical(
+                vec![
+                    Box::new(player_area),
+                    Box::new(Layout::horizontal(
+                        vec![
+                            Box::new(factory_area),
+                            Box::new(Layout::vertical(
+                                vec![Box::new(common_area), Box::new(score_view)],
+                            )),
+                        ],
+                    )),
+                ],
+            )))
             .build()
             .unwrap();
         gameview.render(writer);
