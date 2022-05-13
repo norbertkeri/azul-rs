@@ -22,7 +22,7 @@ impl Player {
     }
 
     pub fn default_with_name(name: String) -> Self {
-        Self::new(name, BuildingArea::new())
+        Self::new(name, BuildingArea::default())
     }
 
     pub fn get_name(&self) -> &str {
@@ -51,15 +51,17 @@ pub struct BuildingArea {
     wall: Wall,
 }
 
-impl BuildingArea {
-    pub fn new() -> Self {
+impl Default for BuildingArea {
+    fn default() -> Self {
         let in_progress = [1, 2, 3, 4, 5].map(PatternLine::new_free);
         Self {
             in_progress,
             wall: Default::default(),
         }
     }
+}
 
+impl BuildingArea {
     pub fn get_row(&self, row_number: usize) -> &PatternLine {
         &self.in_progress[row_number]
     }
@@ -89,12 +91,6 @@ impl BuildingArea {
                 self.in_progress[row_number].can_accept(what)
             }
         }
-    }
-}
-
-impl Default for BuildingArea {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
