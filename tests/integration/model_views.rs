@@ -44,12 +44,12 @@ fn test_factoryview_selected() {
     expect_component(view, "GW|YY|");
 }
 
-#[test_case(" ☐☐YY", PatternLine::new_taken(Tile::Yellow, 4, 2); "can render a taken patternline")]
-#[test_case("   ☐☐", PatternLine::new_free(2); "can render a free patternline")]
+#[test_case("    ☐☐YY", PatternLine::new_taken(Tile::Yellow, 4, 2); "can render a taken patternline")]
+#[test_case("      ☐☐", PatternLine::new_free(2); "can render a free patternline")]
 fn test_patternline_rendering(
     expected: &str,
     patternline: azulrs::model::patternline::PatternLine,
 ) {
-    let view = azulrs::model::patternline::PatternLineView::new(&patternline);
+    let view = azulrs::model::patternline::PatternLineView::new(&patternline, false);
     expect_component(view, expected);
 }
