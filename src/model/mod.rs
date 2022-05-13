@@ -16,6 +16,7 @@ use self::tilecollection::{HasTileCollection, TileCollection};
 use self::view::render_pickables;
 
 pub mod bag;
+pub mod floorline;
 pub mod patternline;
 pub mod player;
 pub mod tilecollection;
