@@ -1,6 +1,6 @@
 use self::player::PlayerAreaView;
 
-use super::{AppEvent, Factory, Game, Tile};
+use super::{AppEvent, Factory, Game, Tile, Direction};
 use crate::visor::renderer::RootedRenderer;
 use crate::visor::view::PanelBuilder;
 use crate::{
@@ -231,18 +231,18 @@ impl<const N: usize> Component for GameView<N> {
         match e {
             UserInput::Character(c) => match game.state {
                 GameState::PickFactory { .. } => match c {
-                    'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
-                    'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
+                    'j' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Next)),
+                    'k' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Prev)),
                     _ => UserEventHandled::Noop,
                 },
                 GameState::PickTileFromFactory { .. } => match c {
-                    'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
-                    'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
+                    'j' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Next)),
+                    'k' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Prev)),
                     _ => UserEventHandled::Noop,
                 },
                 GameState::PickRowToPutTiles { .. } => match c {
-                    'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
-                    'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
+                    'j' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Next)),
+                    'k' => UserEventHandled::AppEvent(AppEvent::Select(Direction::Prev)),
                     _ => UserEventHandled::Noop,
                 },
             },

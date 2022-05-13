@@ -13,8 +13,7 @@ pub mod player;
 pub mod view;
 
 pub enum AppEvent {
-    SelectNext,
-    SelectPrev,
+    Select(Direction),
     TransitionToPickTileFromFactory {
         factory_id: usize,
         tile: Tile,
@@ -343,14 +342,14 @@ impl<const N: usize> Game<N> {
 
     pub fn handle(&mut self, e: AppEvent) {
         let new_e = match e {
-            AppEvent::SelectNext => match self.state {
+            AppEvent::Select(dir) => match self.state {
                 GameState::PickFactory {
                     player_id,
                     current_factory,
                 } => {
                     let pickable_factories = self.find_pickable_factories();
                     let next_factory_id = pickable_factories
-                        .scroll(current_factory, Direction::Next)
+                        .scroll(current_factory, dir)
                         .unwrap_or(current_factory);
                     GameState::PickFactory {
                         player_id,
@@ -363,7 +362,7 @@ impl<const N: usize> Game<N> {
                     selected_tile,
                 } => {
                     let next_tile = self.factories[factory_id]
-                        .find_adjacent_tile(selected_tile, Direction::Next);
+                        .find_adjacent_tile(selected_tile, dir);
                     GameState::PickTileFromFactory {
                         player_id,
                         factory_id,
@@ -384,59 +383,7 @@ impl<const N: usize> Game<N> {
                             count,
                             player_id,
                             selected_row_id,
-                            Direction::Next,
-                        )
-                        .unwrap_or(selected_row_id);
-                    GameState::PickRowToPutTiles {
-                        factory_id,
-                        player_id,
-                        tile,
-                        selected_row_id,
-                    }
-                }
-            },
-            AppEvent::SelectPrev => match self.state {
-                GameState::PickFactory {
-                    player_id,
-                    current_factory,
-                } => {
-                    let pickable_factories = self.find_pickable_factories();
-                    let next_factory_id = pickable_factories
-                        .scroll(current_factory, Direction::Prev)
-                        .unwrap_or(current_factory);
-                    GameState::PickFactory {
-                        player_id,
-                        current_factory: next_factory_id,
-                    }
-                }
-                GameState::PickTileFromFactory {
-                    player_id,
-                    factory_id,
-                    selected_tile,
-                } => {
-                    let prev_tile = self.factories[factory_id]
-                        .find_adjacent_tile(selected_tile, Direction::Prev);
-                    GameState::PickTileFromFactory {
-                        player_id,
-                        factory_id,
-                        selected_tile: prev_tile,
-                    }
-                }
-                GameState::PickRowToPutTiles {
-                    player_id,
-                    factory_id,
-                    tile,
-                    selected_row_id,
-                } => {
-                    let factory = &self.get_factories()[factory_id];
-                    let count = factory.count_tile(tile);
-                    let selected_row_id = self
-                        .find_adjacent_selectable_row(
-                            tile,
-                            count,
-                            player_id,
-                            selected_row_id,
-                            Direction::Prev,
+                            dir,
                         )
                         .unwrap_or(selected_row_id);
                     GameState::PickRowToPutTiles {
