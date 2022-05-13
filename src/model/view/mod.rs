@@ -64,7 +64,11 @@ impl<'a> FactoryView<'a> {
     }
 
     fn has_selected_tile(&self) -> bool {
-        matches!(self.selected_tile, Some(tile) if self.factory.0.contains(&tile))
+        match (self.factory.get_tiles(), self.selected_tile) {
+            (Some(tiles), Some(selected_tile)) => tiles.contains(&selected_tile),
+            _ => false
+        }
+        //matches!(self.selected_tile, Some(tile) if self.factory.0.contains(&tile))
     }
 }
 
@@ -77,28 +81,30 @@ impl<'a> From<FactoryView<'a>> for Box<dyn Component + 'a> {
 impl Component for FactoryView<'_> {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
         let mut began_selection = false;
-        let mut iter = self.factory.get_tiles().iter().peekable();
-        if self.is_selected {
-            writer.write("--> ");
-        }
-        while let Some(t) = iter.next() {
-            if !began_selection
-                && matches!(self.selected_tile, Some(selected_tile) if &selected_tile == t)
-            {
-                writer.write("|");
-                began_selection = true;
+        if let Some(tiles) = self.factory.get_tiles() {
+            let mut iter = tiles.iter().peekable();
+            if self.is_selected {
+                writer.write("--> ");
             }
-            TileView::new(*t, false).render(writer);
-            if began_selection {
-                let selected_tile = self.selected_tile.unwrap();
-                let render_closing = match iter.peek() {
-                    Some(next_tile) if *next_tile != &selected_tile => true,
-                    None => true,
-                    _ => false,
-                };
-                if render_closing {
+            while let Some(t) = iter.next() {
+                if !began_selection
+                    && matches!(self.selected_tile, Some(selected_tile) if &selected_tile == t)
+                {
                     writer.write("|");
-                    began_selection = false;
+                    began_selection = true;
+                }
+                TileView::new(*t, false).render(writer);
+                if began_selection {
+                    let selected_tile = self.selected_tile.unwrap();
+                    let render_closing = match iter.peek() {
+                        Some(next_tile) if *next_tile != &selected_tile => true,
+                        None => true,
+                        _ => false,
+                    };
+                    if render_closing {
+                        writer.write("|");
+                        began_selection = false;
+                    }
                 }
             }
         }

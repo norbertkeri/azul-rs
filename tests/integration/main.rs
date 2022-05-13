@@ -6,6 +6,8 @@ mod layout_test;
 mod model_views;
 mod panel_test;
 mod renderer;
+mod factory_test;
+mod util;
 
 fn testdata(data: &str) -> &str {
     data.trim_start()

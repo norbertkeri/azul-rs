@@ -158,7 +158,7 @@ impl Panel<'_> {
                 /* If the name of the panel has even characters, and the width of the box is odd (or vice versa, they don't
                  * match), we have to add an extra -, otherwise the top line won't line up with the bottom.
                  * This will make the title slightly off center, nothing we can do here.
-                 * I'm going to add an extra - on the right side.
+                 * I'm going to add the extra - on the right side.
                  */
                 if w as usize % 2 != name.len() % 2 {
                     writer.write("─");

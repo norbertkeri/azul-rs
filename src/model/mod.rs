@@ -8,9 +8,12 @@ use std::{
     str::FromStr,
 };
 
+use self::patternline::PatternLine;
+
 pub mod player;
 pub mod view;
 pub mod bag;
+pub mod patternline;
 
 pub enum AppEvent {
     SelectNext,
@@ -82,6 +85,7 @@ impl FromStr for Tile {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Pickable {
     FirstPlayerToken,
     Tile(Tile),
@@ -98,22 +102,52 @@ impl ToString for Pickable {
 
 pub struct CommonArea(Vec<Pickable>);
 
-pub struct Factory([Tile; 4]);
+impl CommonArea {
+    pub fn inspect(&self) -> &[Pickable] {
+        &self.0
+    }
+}
+
+impl CommonArea {
+    pub fn new(mut pickables: Vec<Pickable>) -> Self {
+        let mut initial = vec![Pickable::FirstPlayerToken];
+        initial.append(&mut pickables);
+        Self(initial)
+    }
+
+    pub fn add(&mut self, tiles: &[Tile]) {
+        let mut tiles = tiles.iter().copied().map(Pickable::Tile).collect();
+        self.0.append(&mut tiles);
+    }
+}
+
+pub struct Factory(Option<[Tile; 4]>);
 
 impl Factory {
     pub fn new(mut tiles: [Tile; 4]) -> Self {
         tiles.sort();
-        Self(tiles)
+        Self(Some(tiles))
+    }
+
+    pub fn new_empty() -> Self {
+        Self(None)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_none()
     }
 
     fn distinct_tiles(&self) -> Vec<Tile> {
-        let mut result: Vec<Tile> = Vec::with_capacity(4);
-        for t in self.0.iter() {
-            if !result.contains(t) {
-                result.push(*t);
+        if let Some(tiles) = self.0 {
+            let mut result: Vec<Tile> = Vec::with_capacity(4);
+            for t in tiles.iter() {
+                if !result.contains(t) {
+                    result.push(*t);
+                }
             }
+            return result;
         }
-        result
+        vec![]
     }
 
     pub fn find_before(&self, before: Tile) -> Tile {
@@ -140,16 +174,36 @@ impl Factory {
         distinct[i + 1]
     }
 
-    pub fn find_first_tile(&self) -> Tile {
-        self.0[0]
+    pub fn find_first_tile(&self) -> Option<Tile> {
+        self.0.map(|tiles| tiles[0])
     }
 
-    pub fn find_last_tile(&self) -> Tile {
-        *self.0.last().unwrap()
+    pub fn find_last_tile(&self) -> Option<Tile> {
+        self.0.map(|tiles| tiles.last().copied()).flatten()
     }
 
-    pub fn get_tiles(&self) -> &[Tile] {
-        &self.0
+    pub fn get_tiles(&self) -> Option<&[Tile]> {
+        self.0.as_ref()
+        .map(|t| t.as_slice())
+    }
+
+    pub fn count_tile(&self, tile: Tile) -> usize {
+        match self.get_tiles() {
+            Some(tiles) => tiles.iter().filter(|&&t| t == tile).count(),
+            None => 0
+        }
+    }
+
+    pub fn pick(&mut self, picked_tile: Tile, common_area: &mut CommonArea, pattern_line: &mut PatternLine) -> Result<(), String> {
+        let tiles = self.0.as_ref().ok_or_else(|| String::from("You tried picking an empty factory"))?;
+        if !tiles.contains(&picked_tile) {
+            return Err(format!("You tried picking tile {} from a factory that does not have it", picked_tile));
+        }
+        let (picked, non_picked): (Vec<Tile>, Vec<Tile>) = tiles.iter().partition(|&tile| tile == &picked_tile);
+        pattern_line.accept(picked_tile, picked.len())?;
+        common_area.add(&non_picked);
+        self.0 = None;
+        Ok(())
     }
 }
 
@@ -173,7 +227,7 @@ pub struct Game<const N: usize> {
 
 impl<const N: usize> Game<N> {
     pub fn find_first_tile_in_factory(&self, factory_id: usize) -> Tile {
-        self.factories[factory_id].find_first_tile()
+        self.factories[factory_id].find_first_tile().unwrap() // TODO unwrap
     }
 
     pub fn find_next_tile_in_factory_after(&self, factory_id: usize, after: Tile) -> Tile {
@@ -284,4 +338,15 @@ pub enum GameState {
         factory_id: usize,
         selected_tile: Tile,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::model::{Tile, Factory};
+
+    #[test]
+    fn test_count_tile() {
+        let factory = Factory::new([Tile::Yellow, Tile::Yellow, Tile::Green, Tile::Red]);
+        assert_eq!(factory.count_tile(Tile::Yellow), 2);
+    }
 }
