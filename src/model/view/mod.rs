@@ -137,6 +137,29 @@ struct FactoryAreaView {
     state: FactoryAreaState,
 }
 
+impl<const N: usize> From<&Game<N>> for FactoryAreaView {
+    fn from(game: &Game<N>) -> Self {
+        let factory_state = match game.state {
+            GameState::PickFactory {
+                current_factory, ..
+            } => FactoryAreaState::SelectFactory(current_factory),
+            GameState::PickTileFromFactory {
+                selected_tile,
+                factory_id,
+                ..
+            } => FactoryAreaState::SelectTile {
+                factory_id,
+                tile: selected_tile,
+            },
+        };
+        let factories: Vec<_> = game.get_factories().to_vec();
+        Self {
+            state: factory_state,
+            factories,
+        }
+    }
+}
+
 impl Component for FactoryAreaView {
     fn render(&self, writer: &mut RootedRenderer) {
         let factory_views: Vec<_> = self
@@ -179,26 +202,9 @@ pub struct GameView<const N: usize> {
 
 impl<const N: usize> Component for GameView<N> {
     fn render(&self, writer: &mut RootedRenderer) {
-        let game = self.game.as_ref().borrow();
-        let factory_state = match game.state {
-            GameState::PickFactory {
-                current_factory, ..
-            } => FactoryAreaState::SelectFactory(current_factory),
-            GameState::PickTileFromFactory {
-                selected_tile,
-                factory_id,
-                ..
-            } => FactoryAreaState::SelectTile {
-                factory_id,
-                tile: selected_tile,
-            },
-        };
-        let factories: Vec<_> = game.get_factories().to_vec();
-        let factory_area = FactoryAreaView {
-            state: factory_state,
-            factories,
-        };
+        let game: &Game<N> = &self.game.as_ref().borrow();
         let player_area = PlayerAreaView::new(game.get_players());
+        let factory_area: FactoryAreaView = game.into();
 
         let gameview = PanelBuilder::default()
             .component(Box::new(Layout::vertical(
