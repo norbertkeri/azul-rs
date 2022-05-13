@@ -17,9 +17,9 @@ use termion::raw::IntoRawMode;
 
 fn main() {
     let players = [Player::new("Alice".into()), Player::new("Bob".into())];
-    let game = Game::for_players(players);
+    let game = Rc::new(RefCell::new(Game::for_players(players)));
     let game_view = GameView {
-        game: Rc::new(game)
+        game: game.clone()
     };
     let backend = TermionBackend::new(Box::new(stdout()));
     let mut engine = Engine::new(backend, Box::new(game_view) as Box<_>);
@@ -28,8 +28,9 @@ fn main() {
     let mut stdout = stdout().into_raw_mode().unwrap();
     write!(stdout, "{}", termion::cursor::Hide).unwrap();
 
+    engine.render();
     for c in stdin.keys() {
-        engine.render();
+        stdout.flush().unwrap();
 
         match c.unwrap() {
             termion::event::Key::Backspace => {
@@ -53,11 +54,12 @@ fn main() {
                     },
                     _ => None
                 };
-                if let Some(_appevent) = result {
-                    //game.handle_app_event(appevent);
+                if let Some(appevent) = result {
+                    game.as_ref().borrow_mut().handle(appevent);
                 }
             }
             _ => {}
         }
+        engine.render();
     }
 }

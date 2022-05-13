@@ -137,6 +137,27 @@ impl<const N: usize> Game<N> {
         })
     }
 
+    pub fn handle(&mut self, e: AppEvent) {
+        let new_e = match e {
+            AppEvent::SelectNext => {
+                match self.state {
+                    GameState::PickFactory { player_id, current_factory } => {
+                        GameState::PickFactory { player_id, current_factory: current_factory + 1 }
+                    },
+                }
+            },
+            AppEvent::SelectPrev => {
+                match self.state {
+                    GameState::PickFactory { player_id, current_factory } => {
+                        GameState::PickFactory { player_id, current_factory: current_factory - 1 }
+                    },
+                }
+            }
+        };
+
+        self.state = new_e;
+    }
+
 }
 
 pub enum GameState {

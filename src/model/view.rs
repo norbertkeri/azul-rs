@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, cell::RefCell};
 use crate::visor::{Component, layout::Layout, UserInput, UserEventHandled};
 use super::{Tile, Factory, Game, AppEvent};
 use crate::visor::view::PanelBuilder;
@@ -43,11 +43,13 @@ impl Component for TileView {
 
 pub struct FactoryView {
     factory: Rc<Factory>,
-    selected_tile: Option<Tile>
+    selected_tile: Option<Tile>,
+    is_selected: bool
 }
 
 impl FactoryView {
-    pub fn new(factory: Rc<Factory>, selected_tile: Option<Tile>) -> Self { Self { factory, selected_tile } }
+    pub fn new(factory: Rc<Factory>, selected_tile: Option<Tile>, is_selected: bool) -> Self { Self { factory, selected_tile, is_selected } }
+
     fn has_selected_tile(&self) -> bool {
         matches!(self.selected_tile, Some(tile) if self.factory.as_ref().0.contains(&tile))
     }
@@ -63,6 +65,9 @@ impl Component for FactoryView {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
         let mut began_selection = false;
         let mut iter = self.factory.get_tiles().iter().peekable();
+        if self.is_selected {
+            writer.write("--> ");
+        }
         while let Some(t) = iter.next() {
             if !began_selection && matches!(self.selected_tile, Some(selected_tile) if &selected_tile == t) {
                 writer.write("|");
@@ -99,7 +104,7 @@ impl Component for FactoryView {
 pub enum FactoryAreaState {
     Passive,
     SelectFactory(usize), // TODO name this as currently_selected?
-    SelectTile(usize) // TODO same here?
+    SelectTile { factory_id: usize, tile: Tile }
 }
 
 struct FactoryAreaView {
@@ -109,8 +114,13 @@ struct FactoryAreaView {
 
 impl Component for FactoryAreaView {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
-        let factory_views: Vec<_> = self.factories.iter().map(|f| {
-            let view = FactoryView::new(f.clone(), None);
+        let factory_views: Vec<_> = self.factories.iter().enumerate().map(|(i, f)| {
+            let is_selected = match self.state {
+                FactoryAreaState::Passive => false,
+                FactoryAreaState::SelectFactory(selected) => i == selected,
+                FactoryAreaState::SelectTile { factory_id, tile: _ } => factory_id == i
+            };
+            let view = FactoryView::new(f.clone(), None, is_selected);
             Box::new(view) as Box<dyn Component>
         }).collect();
 
@@ -130,17 +140,18 @@ impl Component for FactoryAreaView {
 }
 
 pub struct GameView<const N: usize> {
-    pub game: Rc<Game<N>>
+    pub game: Rc<RefCell<Game<N>>>
 }
 
 impl<const N: usize> Component for GameView<N> {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
-        let factory_state = match self.game.state {
+        let game = self.game.as_ref().borrow();
+        let factory_state = match game.state {
             crate::model::GameState::PickFactory { current_factory, .. } => {
                 FactoryAreaState::SelectFactory(current_factory)
             }
         };
-        let factories: Vec<_> = self.game.get_factories().to_vec();
+        let factories: Vec<_> = game.get_factories().to_vec();
         let factory_area = FactoryAreaView {
             state: factory_state,
             factories
@@ -153,13 +164,18 @@ impl<const N: usize> Component for GameView<N> {
     }
 
     fn handle(&mut self, e: &UserInput) -> UserEventHandled {
+        let game = self.game.as_ref().borrow();
         match e {
-            UserInput::Character(_c) => match self.game.state {
+            UserInput::Character(c) => match game.state {
                 super::GameState::PickFactory { .. } => {
-                    UserEventHandled::AppEvent(AppEvent::SelectNext)
+                    match c {
+                        'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
+                        'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
+                        _ => UserEventHandled::Noop
+                    }
                 }
             },
-            UserInput::Confirm | UserInput::Back => todo!(),
+            UserInput::Confirm | UserInput::Back => UserEventHandled::Noop
         }
     }
 
