@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::visor::{renderer, Component};
 
 use super::{player::Slot, Tile};
@@ -9,6 +11,7 @@ pub struct Wall {
     points: u16,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum FillResult {
     PointsGained(u16),
     PointsGainedAndGameOver(u16),
@@ -31,43 +34,39 @@ impl Wall {
                 self.slots[row][col] = Slot::Filled(tile);
                 let mut adjacents_in_row = 0;
                 let mut adjacents_in_col = 0;
-                // <-
+                let mut ranges_row: Vec<Box<dyn Iterator<Item = usize>>> = vec![];
+                let mut ranges_col: Vec<Box<dyn Iterator<Item = usize>>> = vec![];
+
                 if col > 0 {
-                    for i in (0..=col - 1).rev() {
-                        if self.is_filled((row, i)) {
-                            adjacents_in_row += 1;
-                        } else {
-                            break;
-                        }
-                    }
+                    ranges_row.push(Box::new((0..=col - 1).rev()));
                 }
-                // ->
                 if col < AREA_LENGTH {
-                    for i in (col + 1)..AREA_LENGTH {
-                        if self.is_filled((row, i)) {
-                            adjacents_in_row += 1;
-                        } else {
-                            break;
-                        }
-                    }
+                    ranges_row.push(Box::new((col + 1)..AREA_LENGTH));
                 }
-                // ^
                 if row > 0 {
-                    for i in (0..=row - 1).rev() {
-                        if self.is_filled((i, col)) {
-                            adjacents_in_col += 1;
-                        } else {
-                            break;
+                    ranges_col.push(Box::new((0..=row - 1).rev()));
+                }
+                if row < AREA_LENGTH {
+                    ranges_col.push(Box::new((row + 1)..AREA_LENGTH));
+                }
+
+                for range in ranges_row {
+                    for i in range {
+                        match self.at(row, i) {
+                            Slot::Filled(_tile) => {
+                                adjacents_in_row += 1;
+                            }
+                            Slot::Free(_) => break,
                         }
                     }
                 }
-                // v
-                if row < AREA_LENGTH {
-                    for i in (row + 1)..AREA_LENGTH {
-                        if self.is_filled((i, col)) {
-                            adjacents_in_col += 1;
-                        } else {
-                            break;
+                for range in ranges_col {
+                    for i in range {
+                        match self.at(i, col) {
+                            Slot::Filled(_tile) => {
+                                adjacents_in_col += 1;
+                            }
+                            Slot::Free(_) => break,
                         }
                     }
                 }
@@ -90,6 +89,10 @@ impl Wall {
                     gained += 2;
                     over = true;
                 }
+                if self.has_diagonal() {
+                    gained += 10;
+                }
+
                 self.points += gained;
                 if over {
                     FillResult::PointsGainedAndGameOver(gained)
@@ -98,6 +101,22 @@ impl Wall {
                 }
             }
         }
+    }
+
+    fn has_diagonal(&self) -> bool {
+        let mut tiles: HashMap<Tile, u8> = Default::default();
+        for row in &self.slots {
+            for slot in row {
+                match slot {
+                    Slot::Filled(tile) => {
+                        let entry = tiles.entry(*tile).or_default();
+                        *entry += 1;
+                    }
+                    Slot::Free(_) => {}
+                }
+            }
+        }
+        tiles.iter().any(|(_tile, count)| *count == 5)
     }
 
     pub fn count_points(&self) -> u16 {
@@ -109,6 +128,10 @@ impl Wall {
             Slot::Filled(_) => true,
             Slot::Free(_) => false,
         }
+    }
+
+    fn at(&self, row: usize, col: usize) -> &Slot {
+        &self.slots[row][col]
     }
 }
 
@@ -162,11 +185,10 @@ impl<'a> Component for WallView<'a> {
 }
 
 mod tests {
-    use std::collections::BTreeMap;
-
-    use test_case::test_case;
-
     use super::{Wall, AREA_LENGTH};
+    use crate::model::wall::FillResult;
+    use std::collections::BTreeMap;
+    use test_case::test_case;
 
     impl Wall {
         pub fn from_string(input: &str) -> Wall {
@@ -253,9 +275,30 @@ mod tests {
 00000
 00000
 ", 17; "sums whole row")]
-    // TODO diagonal
+    #[test_case("
+10000
+02000
+00300
+00040
+00005
+", 15; "sums diagonal")]
     fn test_counting_score(input: &str, expected: u16) {
         let wall = Wall::from_string(input.trim());
         expect_points(&wall, expected);
+    }
+
+    #[test]
+    fn test_row_ends_game() {
+        let input = "
+12340
+00000
+00000
+00000
+00000
+"
+        .trim();
+        let mut wall = Wall::from_string(input);
+        let result = wall.fill_slot(0, 4);
+        pretty_assertions::assert_eq!(result, FillResult::PointsGainedAndGameOver(7));
     }
 }
