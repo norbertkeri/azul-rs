@@ -1,6 +1,6 @@
 use self::player::PlayerAreaView;
 
-use super::{AppEvent, CommonAreaView, Direction, Factory, Game, Tile};
+use super::{AppEvent, CommonAreaView, Direction, Factory, Game, Tile, FactoryId};
 use crate::visor::renderer::RootedRenderer;
 use crate::visor::view::PanelBuilder;
 use crate::{
@@ -128,8 +128,8 @@ impl Component for FactoryView<'_> {
 
 pub enum FactoryAreaState {
     Passive,
-    SelectFactory(usize), // TODO name this as currently_selected?
-    SelectTile { factory_id: usize, tile: Tile },
+    SelectFactory(FactoryId), // TODO name this as currently_selected?
+    SelectTile { factory_id: FactoryId, tile: Tile },
 }
 
 struct FactoryAreaView<'a> {
@@ -174,7 +174,7 @@ impl Component for FactoryAreaView<'_> {
             .enumerate()
             .map(|(i, f)| {
                 let (is_selected, selected_tile): (bool, Option<Tile>) = match self.state {
-                    FactoryAreaState::SelectFactory(selected) => (i == selected, None),
+                    FactoryAreaState::SelectFactory(selected) => (selected == i, None),
                     FactoryAreaState::SelectTile { factory_id, tile } if factory_id == i => {
                         (true, Some(tile))
                     }

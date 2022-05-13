@@ -4,6 +4,7 @@ use crate::{
     visor::{view::TextView, Component},
 };
 use rand::{distributions::Standard, prelude::Distribution};
+use std::ops::{Index, IndexMut};
 use std::{
     fmt::{Debug, Display},
     str::FromStr,
@@ -20,17 +21,17 @@ pub mod view;
 pub enum AppEvent {
     Select(Direction),
     TransitionToPickTileFromFactory {
-        factory_id: usize,
+        factory_id: FactoryId,
         tile: Tile,
     },
     TransitionToPickRow {
         player_id: usize,
-        factory_id: usize,
+        factory_id: FactoryId,
         tile: Tile,
     },
     PlaceTiles {
         player_id: usize,
-        factory_id: usize,
+        factory_id: FactoryId,
         tile: Tile,
         row_id: usize,
     },
@@ -41,18 +42,41 @@ pub enum Slot {
     Tile(Tile),
 }
 
-pub trait Scrollable<K, T>
-where
-    K: PartialEq,
-{
-    fn scroll(&self, pivot: usize, direction: Direction) -> Option<K>;
+pub trait Scrollable<T> {
+    fn scroll(&self, pivot: T, direction: Direction) -> Option<T>;
 }
 
-impl<K, T> Scrollable<K, T> for Vec<(K, T)>
-where
-    K: PartialEq<usize> + PartialEq<K> + Copy,
+impl<T> Scrollable<T> for Vec<T>
+    where T: PartialEq + Copy
 {
-    fn scroll(&self, pivot: usize, direction: Direction) -> Option<K> {
+    fn scroll(&self, pivot: T, direction: Direction) -> Option<T> {
+        let current_row_index = self
+            .iter()
+            .position(|p| p == &pivot)
+            .expect("The pivot is not in the vec?");
+
+        match (self.len(), direction) {
+            (count, Direction::Next) if count - 1 == current_row_index => {
+                let first_index = self.first().unwrap();
+                Some(*first_index)
+            }
+            (_, Direction::Prev) if current_row_index == 0 => {
+                let last_index = self.last().unwrap();
+                Some(*last_index)
+            }
+            (_, Direction::Next) => self
+                .get(current_row_index + 1).copied(),
+            (_, Direction::Prev) => self
+                .get(current_row_index - 1).copied(),
+        }
+    }
+}
+
+impl<S, T> Scrollable<S> for Vec<(S, T)>
+where
+    S: PartialEq<usize> + PartialEq<S> + Copy,
+{
+    fn scroll(&self, pivot: S, direction: Direction) -> Option<S> {
         let current_row_index = self
             .iter()
             .position(|(i, _)| i == &pivot)
@@ -323,10 +347,47 @@ pub enum Direction {
 
 pub struct Game<const N: usize> {
     players: [Player; N],
-    factories: [Factory; 4],
+    factories: Vec<Factory>,
     state: GameState,
     bag: Bag,
     pub(crate) common_area: CommonArea,
+}
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Ord, PartialOrd, Hash)]
+pub struct FactoryId(usize);
+
+impl PartialEq<usize> for FactoryId {
+    fn eq(&self, other: &usize) -> bool {
+        &self.0 == other
+    }
+}
+
+impl From<usize> for FactoryId {
+    fn from(id: usize) -> Self {
+        Self(id)
+    }
+}
+
+impl Index<FactoryId> for [Factory] {
+    type Output = Factory;
+
+    fn index(&self, index: FactoryId) -> &Self::Output {
+        &self[index.0]
+    }
+}
+
+impl IndexMut<FactoryId> for Vec<Factory> {
+    fn index_mut(&mut self, index: FactoryId) -> &mut Self::Output {
+        &mut self[index.0]
+    }
+}
+
+impl Index<FactoryId> for Vec<Factory> {
+    type Output = Factory;
+
+    fn index(&self, index: FactoryId) -> &Self::Output {
+        &self[index.0]
+    }
 }
 
 impl<const N: usize> Game<N> {
@@ -334,28 +395,29 @@ impl<const N: usize> Game<N> {
         &self.players
     }
 
-    pub fn find_pickable_factories(&self) -> Vec<(usize, &Factory)> {
+    pub fn find_pickable_factories(&self) -> Vec<FactoryId> {
         self.factories
             .iter()
             .enumerate()
             .filter(|(_, f)| !f.is_empty())
+            .map(|(id, _)| id.into())
             .collect()
     }
 
-    pub fn find_first_tile_in_factory(&self, factory_id: usize) -> Tile {
+    pub fn find_first_tile_in_factory(&self, factory_id: FactoryId) -> Tile {
         self.factories[factory_id].find_first_tile().unwrap() // TODO unwrap
     }
 
     pub fn for_players(players: [Player; N]) -> Self {
         let mut bag = Bag::default();
-        let factories = [0, 1, 2, 3].map(|_| Factory::new_from_bag(&mut bag));
+        let factories: Vec<_> = [0, 1, 2, 3].iter().map(|_| Factory::new_from_bag(&mut bag)).collect();
 
         Game {
             players,
             factories,
             state: GameState::PickFactory {
                 player_id: 0,
-                current_factory: 0,
+                current_factory: 0.into(),
             },
             bag,
             common_area: CommonArea::default(),
@@ -478,7 +540,7 @@ impl<const N: usize> Game<N> {
                 }
                 GameState::PickFactory {
                     player_id: 1 - player_id,
-                    current_factory: next_factory.unwrap().0,
+                    current_factory: *next_factory.unwrap(),
                 }
             }
         };
@@ -490,16 +552,16 @@ impl<const N: usize> Game<N> {
 pub enum GameState {
     PickFactory {
         player_id: usize,
-        current_factory: usize,
+        current_factory: FactoryId,
     },
     PickTileFromFactory {
         player_id: usize,
-        factory_id: usize,
+        factory_id: FactoryId,
         selected_tile: Tile,
     },
     PickRowToPutTiles {
         player_id: usize,
-        factory_id: usize,
+        factory_id: FactoryId,
         tile: Tile,
         selected_row_id: usize,
     },
