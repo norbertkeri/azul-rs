@@ -4,10 +4,12 @@ use rand::{distributions::Standard, prelude::Distribution};
 use std::{fmt::Debug, rc::Rc};
 
 pub mod view;
+pub mod gamestate;
 
 pub enum AppEvent {
     SelectNext,
     SelectPrev,
+    TransitionToPickTileFromFactory { factory_id: usize, tile: Tile }
 }
 
 pub struct Player {
@@ -91,7 +93,44 @@ pub struct Factory([Tile; 4]);
 impl Factory {
     pub fn new(mut tiles: [Tile; 4]) -> Self {
         tiles.sort();
+        dbg!(&tiles);
         Self(tiles)
+    }
+
+    fn distinct_tiles(&self) -> Vec<Tile> {
+        let mut result: Vec<Tile> = Vec::with_capacity(4);
+        for t in self.0.iter() {
+            if !result.contains(t) {
+                result.push(*t);
+            }
+        }
+        result
+    }
+
+    pub fn find_before(&self, before: Tile) -> Tile {
+        let distinct = self.distinct_tiles();
+        let i = distinct.iter().position(|maybe_t| maybe_t == &before).expect("This tile is not in the factory?");
+        if i == 0 {
+            return *distinct.last().unwrap();
+        }
+        distinct[i-1]
+    }
+
+    pub fn find_after(&self, after: Tile) -> Tile {
+        let distinct = self.distinct_tiles();
+        let i = distinct.iter().position(|maybe_t| maybe_t == &after).expect("This tile is not in the factory?");
+        if i == distinct.len() - 1 {
+            return *distinct.first().unwrap();
+        }
+        distinct[i+1]
+    }
+
+    pub fn find_first_tile(&self) -> Tile {
+        self.0[0]
+    }
+
+    pub fn find_last_tile(&self) -> Tile {
+        *self.0.last().unwrap()
     }
 
     pub fn get_tiles(&self) -> &[Tile] {
@@ -107,7 +146,7 @@ impl Factory {
             rand::random(),
             rand::random(),
         ];
-        Self(tiles)
+        Self::new(tiles)
     }
 }
 
@@ -118,6 +157,18 @@ pub struct Game<const N: usize> {
 }
 
 impl<const N: usize> Game<N> {
+    pub fn find_first_tile_in_factory(&self, factory_id: usize) -> Tile {
+        self.factories[factory_id].find_first_tile()
+    }
+
+    pub fn find_next_tile_in_factory_after(&self, factory_id: usize, after: Tile) -> Tile {
+        self.factories[factory_id].find_after(after)
+    }
+
+    pub fn find_prev_tile_in_factory_after(&self, factory_id: usize, before: Tile) -> Tile {
+        self.factories[factory_id].find_before(before)
+    }
+
     pub fn for_players(players: [Player; N]) -> Self {
         let factories = Self::generate_factories();
         Game {
@@ -144,6 +195,10 @@ impl<const N: usize> Game<N> {
                     GameState::PickFactory { player_id, current_factory } => {
                         GameState::PickFactory { player_id, current_factory: current_factory + 1 }
                     },
+                    GameState::PickTileFromFactory { player_id, factory_id, selected_tile } => {
+                        let next_tile = self.find_next_tile_in_factory_after(factory_id, selected_tile);
+                        GameState::PickTileFromFactory { player_id, factory_id, selected_tile: next_tile }
+                    },
                 }
             },
             AppEvent::SelectPrev => {
@@ -151,8 +206,23 @@ impl<const N: usize> Game<N> {
                     GameState::PickFactory { player_id, current_factory } => {
                         GameState::PickFactory { player_id, current_factory: current_factory - 1 }
                     },
+                    GameState::PickTileFromFactory { player_id, factory_id, selected_tile } => {
+                        let next_tile = self.find_prev_tile_in_factory_after(factory_id, selected_tile);
+                        GameState::PickTileFromFactory { player_id, factory_id, selected_tile: next_tile }
+                    },
                 }
             }
+            AppEvent::TransitionToPickTileFromFactory { factory_id, tile } => {
+                match self.state {
+                    GameState::PickFactory { player_id, current_factory } => {
+                        GameState::PickTileFromFactory { player_id, factory_id: current_factory, selected_tile: tile }
+                    },
+                    GameState::PickTileFromFactory { player_id, factory_id, selected_tile } => {
+                        todo!()
+                    },
+                }
+
+            },
         };
 
         self.state = new_e;
@@ -161,7 +231,8 @@ impl<const N: usize> Game<N> {
 }
 
 pub enum GameState {
-    PickFactory { player_id: usize, current_factory: usize }
+    PickFactory { player_id: usize, current_factory: usize },
+    PickTileFromFactory { player_id: usize, factory_id: usize, selected_tile: Tile }
 }
 
 struct BuildingArea([PatternLine; 5]);

@@ -1,5 +1,5 @@
 use std::{rc::Rc, cell::RefCell};
-use crate::visor::{Component, layout::Layout, UserInput, UserEventHandled};
+use crate::{visor::{Component, layout::Layout, UserInput, UserEventHandled}, model::GameState};
 use super::{Tile, Factory, Game, AppEvent};
 use crate::visor::view::PanelBuilder;
 
@@ -115,12 +115,18 @@ struct FactoryAreaView {
 impl Component for FactoryAreaView {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
         let factory_views: Vec<_> = self.factories.iter().enumerate().map(|(i, f)| {
-            let is_selected = match self.state {
-                FactoryAreaState::Passive => false,
-                FactoryAreaState::SelectFactory(selected) => i == selected,
-                FactoryAreaState::SelectTile { factory_id, tile: _ } => factory_id == i
+            let (is_selected, selected_tile): (bool, Option<Tile>) = match self.state {
+                FactoryAreaState::Passive => (false, None),
+                FactoryAreaState::SelectFactory(selected) => (i == selected, None),
+                FactoryAreaState::SelectTile { factory_id, tile } => {
+                    if factory_id == i {
+                        (factory_id == i, Some(tile))
+                    } else {
+                        (factory_id == i, None)
+                    }
+                }
             };
-            let view = FactoryView::new(f.clone(), None, is_selected);
+            let view = FactoryView::new(f.clone(), selected_tile, is_selected);
             Box::new(view) as Box<dyn Component>
         }).collect();
 
@@ -147,8 +153,11 @@ impl<const N: usize> Component for GameView<N> {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
         let game = self.game.as_ref().borrow();
         let factory_state = match game.state {
-            crate::model::GameState::PickFactory { current_factory, .. } => {
+            GameState::PickFactory { current_factory, .. } => {
                 FactoryAreaState::SelectFactory(current_factory)
+            }
+            GameState::PickTileFromFactory { selected_tile, factory_id, .. } => {
+                FactoryAreaState::SelectTile { factory_id, tile: selected_tile }
             }
         };
         let factories: Vec<_> = game.get_factories().to_vec();
@@ -167,15 +176,31 @@ impl<const N: usize> Component for GameView<N> {
         let game = self.game.as_ref().borrow();
         match e {
             UserInput::Character(c) => match game.state {
-                super::GameState::PickFactory { .. } => {
+                GameState::PickFactory { .. } => {
                     match c {
                         'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
                         'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
                         _ => UserEventHandled::Noop
                     }
                 }
+                GameState::PickTileFromFactory { .. } => {
+                    match c {
+                        'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
+                        'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
+                        _ => UserEventHandled::Noop
+                    }
+                },
             },
-            UserInput::Confirm | UserInput::Back => UserEventHandled::Noop
+            UserInput::Confirm => {
+                match game.state {
+                    GameState::PickFactory { player_id: _, current_factory } => {
+                        let tile = self.game.borrow().find_first_tile_in_factory(current_factory);
+                        UserEventHandled::AppEvent(AppEvent::TransitionToPickTileFromFactory { factory_id: current_factory, tile })
+                    }
+                    GameState::PickTileFromFactory { .. } => todo!(),
+                }
+            },
+            UserInput::Back => UserEventHandled::Noop
         }
     }
 

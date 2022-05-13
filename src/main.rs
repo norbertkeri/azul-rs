@@ -36,18 +36,13 @@ fn main() {
             termion::event::Key::Backspace => {
                 engine.trigger(UserInput::Back);
             },
-            /*
-            termion::event::Key::Left => todo!(),
-            termion::event::Key::Right => todo!(),
-            termion::event::Key::Up => todo!(),
-            termion::event::Key::Down => todo!(),
-            termion::event::Key::Esc => todo!(),
-            */
             termion::event::Key::Char(c) => {
                 let result = match c {
                     'q' => {
-                        write!(stdout, "{}", termion::cursor::Show).unwrap();
                         break;
+                    },
+                    '\n' => {
+                        engine.trigger(UserInput::Confirm)
                     },
                     direction @ ('j' | 'k') => {
                         engine.trigger(UserInput::Character(direction))
@@ -55,11 +50,12 @@ fn main() {
                     _ => None
                 };
                 if let Some(appevent) = result {
-                    game.as_ref().borrow_mut().handle(appevent);
+                    game.borrow_mut().handle(appevent);
                 }
             }
             _ => {}
         }
         engine.render();
     }
+    write!(stdout, "{}", termion::cursor::Show).unwrap();
 }

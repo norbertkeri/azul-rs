@@ -27,7 +27,7 @@ fn test_tileview_selected() {
 #[test]
 fn test_factoryview_sorts() {
     let factory = Factory::new([Tile::Yellow, Tile::Green, Tile::Yellow, Tile::White]);
-    let view = FactoryView::new(Rc::new(factory), None);
+    let view = FactoryView::new(Rc::new(factory), None, false);
 
     expect_component(view, "GWYY");
 }
@@ -35,7 +35,7 @@ fn test_factoryview_sorts() {
 #[test]
 fn test_factoryview_selected() {
     let factory = Factory::new([Tile::Yellow, Tile::Green, Tile::Yellow, Tile::White]);
-    let view = FactoryView::new(Rc::new(factory), Some(Tile::Yellow));
+    let view = FactoryView::new(Rc::new(factory), Some(Tile::Yellow), false);
 
     expect_component(view, "GW|YY|");
 }
