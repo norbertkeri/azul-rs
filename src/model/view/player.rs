@@ -41,18 +41,18 @@ impl<'a, const N: usize> From<&'a Game<N>> for PlayerAreaView<'a> {
     fn from(game: &'a Game<N>) -> Self {
         let players = game.get_players();
         match game.state {
-            GameState::PickFactory {
+            GameState::PickSource {
                 player_id,
-                current_factory: _,
+                current_source: _,
             } => PlayerAreaView::new(players, player_id, None),
-            GameState::PickTileFromFactory {
+            GameState::PickTileFromSource {
                 player_id,
-                factory_id: _,
+                current_source: _,
                 selected_tile: _,
             } => PlayerAreaView::new(players, player_id, None),
             GameState::PickRowToPutTiles {
                 player_id,
-                factory_id: _,
+                source: _,
                 tile: _,
                 selected_row_id,
             } => PlayerAreaView::new(players, player_id, Some(selected_row_id)),
