@@ -4,7 +4,7 @@ My pet project for learning rust, an implementation of the board game called [Az
 
 It looks like this right now:
 
-![image of a game in progress](./assets/1645479243.png)
+![image of a game in progress](./assets/1647204837.png)
 
 At the moment it's two players only, with no remote multiplayer (so both players would have to sit at the same computer). There is a really basic TUI interface that I threw together using [termion](https://crates.io/crates/termion), which unfortunately doesn't lend itself well to playing the game, unless you already know the rules.
 
