@@ -5,19 +5,16 @@ use std::{
     rc::Rc,
 };
 
-use model::{player::PlayerView, Game};
+use furnace::model::{player::PlayerView, Game};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 
-use crate::model::auction_house::AuctionHouseView;
-use crate::visor::terminal_writer::{TerminalWriter, TermionBackend};
-use crate::{
+use furnace::model::auction_house::AuctionHouseView;
+use furnace::visor::terminal_writer::{TerminalWriter, TermionBackend};
+use furnace::{
     model::{player::Player, AuctionHouse},
     visor::{Engine, UserInput},
 };
-
-mod model;
-mod visor;
 
 fn main() {
     let ah = Rc::new(RefCell::new(AuctionHouse::default()));
