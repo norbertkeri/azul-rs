@@ -1,14 +1,12 @@
 #![allow(dead_code)]
 
-pub mod terminal_writer;
 pub mod layout;
-mod view;
-
-use std::ops::Add;
-
-use crate::model::AppEvent;
+pub mod terminal_writer;
+pub mod view;
 
 use self::terminal_writer::{TerminalBackend, TerminalWriter};
+use crate::model::AppEvent;
+use std::ops::Add;
 
 pub trait Renderable {
     fn render(&self);
@@ -24,6 +22,12 @@ pub trait Component {
 
 #[derive(Copy, Clone)]
 pub struct Coords(u16, u16);
+
+impl From<Coords> for (usize, usize) {
+    fn from(c: Coords) -> Self {
+        (c.0.into(), c.1.into())
+    }
+}
 
 impl From<(u16, u16)> for Coords {
     fn from(what: (u16, u16)) -> Self {
@@ -83,8 +87,12 @@ impl<'a, TerminalWriterBackend: TerminalBackend> Engine<'a, TerminalWriterBacken
             */
 
         self.writer.clear(sink);
-        let inner_padding = 1;
-        let component_padding = 1;
+        for component in self.components.iter() {
+            for line in component.render().lines() {
+                self.writer.write(line, sink);
+            }
+        }
+        /*
         for (i, component) in self.components.iter().enumerate() {
             let (width, height) = component.declare_dimensions();
             let starting_corner = Coords(i as u16 * width + component_padding, 1u16);
@@ -119,6 +127,7 @@ impl<'a, TerminalWriterBackend: TerminalBackend> Engine<'a, TerminalWriterBacken
             self.writer.write(&"─".repeat((width - 2).into()), sink);
             self.writer.write("┘", sink);
         }
+        */
 
         sink.flush().unwrap();
     }

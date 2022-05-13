@@ -3,8 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use self::player::Player;
 
-pub mod player;
 pub mod auction_house;
+pub mod player;
 
 enum CardEffect {
     Income(Resources),
@@ -21,36 +21,18 @@ impl Default for CardState {
     }
 }
 
+#[derive(Default)]
 pub struct Card {
     state: CardState,
     effects_basic: Vec<CardEffect>,
     effects_upgraded: Vec<CardEffect>,
 }
 
-impl Default for Card {
-    fn default() -> Self {
-        Self {
-            state: Default::default(),
-            effects_basic: Default::default(),
-            effects_upgraded: Default::default(),
-        }
-    }
-}
-
+#[derive(Default)]
 pub struct Resources {
     oil: u8,
     steel: u8,
     coal: u8,
-}
-
-impl Default for Resources {
-    fn default() -> Self {
-        Self {
-            oil: Default::default(),
-            steel: Default::default(),
-            coal: Default::default(),
-        }
-    }
 }
 
 pub struct Game {
@@ -79,6 +61,7 @@ impl Game {
     }
 }
 
+#[derive(Default)]
 pub struct AuctionHouse {
     cards: Vec<Card>,
 }
@@ -90,14 +73,6 @@ impl AuctionHouse {
 
     pub fn add_card(&mut self, card: Card) {
         self.cards.push(card)
-    }
-}
-
-impl Default for AuctionHouse {
-    fn default() -> Self {
-        Self {
-            cards: Default::default(),
-        }
     }
 }
 

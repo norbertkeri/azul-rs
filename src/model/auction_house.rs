@@ -33,4 +33,3 @@ impl<'a> Component for AuctionHouseView {
         (40, 10)
     }
 }
-
