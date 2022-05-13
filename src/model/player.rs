@@ -72,25 +72,21 @@ impl BuildingArea {
         &self.in_progress
     }
 
-    pub fn get_rows_that_can_accept(
-        &self,
-        tile: Tile,
-        how_many: usize,
-    ) -> Vec<(usize, &PatternLine)> {
+    pub fn get_rows_that_can_accept(&self, tile: Tile) -> Vec<(usize, &PatternLine)> {
         self.in_progress
             .iter()
             .enumerate()
-            .filter(move |&(i, _p)| self.can_accept(tile, how_many, i))
+            .filter(move |&(i, _p)| self.can_accept(tile, i))
             .collect()
     }
 
-    pub fn can_accept(&self, what: Tile, how_many: usize, row_number: usize) -> bool {
+    pub fn can_accept(&self, what: Tile, row_number: usize) -> bool {
         // Is the tile already filled on the right side?
         match self.wall.find_slot_for_tile(what, row_number) {
             Slot::Filled(_) => false,
             Slot::Free(_) => {
                 // Does the patternline have enough room for this color?
-                self.in_progress[row_number].can_accept(what, how_many)
+                self.in_progress[row_number].can_accept(what)
             }
         }
     }

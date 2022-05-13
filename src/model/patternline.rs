@@ -29,48 +29,38 @@ impl PatternLine {
         }
     }
 
-    pub fn can_accept(&self, what: Tile, how_many: usize) -> bool {
+    pub fn can_accept(&self, what: Tile) -> bool {
         match self {
-            PatternLine::Free { length } => how_many <= *length,
+            PatternLine::Free { .. } => true,
+            PatternLine::Taken { tile, .. } if tile != &what => false,
             PatternLine::Taken {
-                tile,
+                tile: _,
                 length,
                 taken,
-            } => tile == &what && taken + how_many <= *length,
+            } => length > taken,
         }
     }
 
     pub fn accept(&mut self, what: Tile, how_many: usize) -> Result<usize, String> {
-        match self {
+        match *self {
             PatternLine::Free { length } => {
-                if *length >= how_many {
-                    let remainder: usize = (how_many as i8 - *length as i8).try_into().unwrap_or(0);
-                    *self = PatternLine::Taken {
-                        tile: what,
-                        length: *length,
-                        taken: how_many,
-                    };
-                    return Ok(remainder);
-                }
-                return Err(format!(
-                    "Not enough space for {} tiles, I only have room for {}",
-                    how_many, length
-                ));
+                let can_take = std::cmp::min(length, how_many);
+                let remainder: usize = how_many - can_take;
+                *self = PatternLine::Taken {
+                    tile: what,
+                    length,
+                    taken: can_take,
+                };
+                Ok(remainder)
             }
             PatternLine::Taken {
                 tile,
                 length,
-                taken,
-            } if *tile == what => {
-                let can_take = *length - *taken;
-                if how_many > *taken {
-                    return Err(format!(
-                        "Not enough space to hold {}, only have {}",
-                        how_many, can_take
-                    ));
-                }
-                *taken += how_many;
-                let remainder: usize = (how_many as i8 - can_take as i8).try_into().unwrap_or(0);
+                ref mut taken,
+            } if tile == what => {
+                let can_take = std::cmp::min(length - *taken, how_many);
+                *taken += can_take;
+                let remainder: usize = how_many - can_take;
                 Ok(remainder)
             }
             PatternLine::Taken { tile, .. } => Err(format!(
@@ -181,52 +171,27 @@ mod tests {
         pretty_assertions::assert_eq!(pline, expected);
     }
 
-    #[test_case("YY--", (Tile::Yellow, 2, true); "can accept exactly until full")]
-    #[test_case("YY--", (Tile::Yellow, 1, true); "can accept less than full")]
-    #[test_case("YY--", (Tile::Yellow, 3, false); "can't accept too many")]
-    #[test_case("YY--", (Tile::Red, 1, false); "can't accept different color")]
-    fn test_patternline_can_accept(pattern: &str, (tile, how_many, expected): (Tile, usize, bool)) {
+    #[test_case("YY--", (Tile::Yellow, true); "can accept to full")]
+    #[test_case("YY--", (Tile::Yellow, true); "can accept less than full")]
+    #[test_case("YY--", (Tile::Red, false); "can't accept different color")]
+    #[test_case("YYYY", (Tile::Yellow, false); "can't accept if full")]
+    fn test_patternline_can_accept(pattern: &str, (tile, expected): (Tile, bool)) {
         let pline: PatternLine = pattern.parse().unwrap();
-        assert_eq!(pline.can_accept(tile, how_many), expected);
+        assert_eq!(pline.can_accept(tile), expected);
     }
 
-    #[test]
-    fn test_patternline_accept_if_free() {
-        let pattern = "----";
+    #[test_case("----", (Tile::Yellow, 2), 0, PatternLine::Taken { tile: Tile::Yellow, length: 4, taken: 2 }; "accept if free")]
+    #[test_case("YY--", (Tile::Yellow, 1), 0, PatternLine::Taken { tile: Tile::Yellow, length: 4, taken: 3 }; "accept more if taken")]
+    #[test_case("YY--", (Tile::Yellow, 3), 1, PatternLine::Taken { tile: Tile::Yellow, length: 4, taken: 4 }; "accept too many")]
+    fn test_patternline_accept(
+        pattern: &str,
+        (tile_to_accept, how_many): (Tile, usize),
+        expected_remainder: usize,
+        expected_state: PatternLine,
+    ) {
         let mut pline: PatternLine = pattern.parse().unwrap();
-        let remainder = pline.accept(Tile::Yellow, 2);
-        assert_eq!(remainder, Ok(0));
-        pretty_assertions::assert_eq!(
-            pline,
-            PatternLine::Taken {
-                tile: Tile::Yellow,
-                length: 4,
-                taken: 2
-            }
-        );
-    }
-
-    #[test]
-    fn test_patternline_accept_more() {
-        let pattern = "YY--";
-        let mut pline: PatternLine = pattern.parse().unwrap();
-        pretty_assertions::assert_eq!(
-            pline,
-            PatternLine::Taken {
-                tile: Tile::Yellow,
-                length: 4,
-                taken: 2
-            }
-        );
-        let remainder = pline.accept(Tile::Yellow, 1);
-        assert_eq!(remainder, Ok(0));
-        pretty_assertions::assert_eq!(
-            pline,
-            PatternLine::Taken {
-                tile: Tile::Yellow,
-                length: 4,
-                taken: 3
-            }
-        );
+        let remainder = pline.accept(tile_to_accept, how_many);
+        pretty_assertions::assert_eq!(remainder, Ok(expected_remainder));
+        pretty_assertions::assert_eq!(pline, expected_state);
     }
 }

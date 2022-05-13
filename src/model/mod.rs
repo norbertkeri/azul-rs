@@ -437,13 +437,12 @@ impl<const N: usize> Game<N> {
     fn find_adjacent_selectable_row(
         &self,
         tile: Tile,
-        how_many: usize,
         player_id: usize,
         current_row: usize,
         direction: Direction,
     ) -> Option<usize> {
         let barea = self.get_players()[player_id].get_buildingarea();
-        let rows = barea.get_rows_that_can_accept(tile, how_many);
+        let rows = barea.get_rows_that_can_accept(tile);
         rows.scroll(current_row, direction)
     }
 
@@ -488,10 +487,8 @@ impl<const N: usize> Game<N> {
                     tile,
                     selected_row_id,
                 } => {
-                    let count = self.find_source(source).count_tile(tile);
-                    //let factory = &self.get_factories()[factory_id];
                     let selected_row_id = self
-                        .find_adjacent_selectable_row(tile, count, player_id, selected_row_id, dir)
+                        .find_adjacent_selectable_row(tile, player_id, selected_row_id, dir)
                         .unwrap_or(selected_row_id);
                     GameState::PickRowToPutTiles {
                         source,
@@ -518,9 +515,8 @@ impl<const N: usize> Game<N> {
                 source,
                 tile,
             } => {
-                let how_many = self.count_tiles_in(source, tile);
                 let buildingarea = self.get_players()[player_id].get_buildingarea();
-                let rows = buildingarea.get_rows_that_can_accept(tile, how_many);
+                let rows = buildingarea.get_rows_that_can_accept(tile);
                 let first_that_can_fit = rows.first();
                 assert!(first_that_can_fit.is_some());
                 let (selected_row_id, _) = *first_that_can_fit.unwrap();
