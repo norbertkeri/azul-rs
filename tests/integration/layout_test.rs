@@ -1,8 +1,8 @@
-use std::hash::BuildHasher;
-
-use furnace::visor::{layout::Layout, view::{TextView, PanelBuilder}, Component};
-
-use crate::helpers::expect_component;
+use furnace::visor::{
+    layout::Layout,
+    view::{PanelBuilder, TextView},
+    Component,
+};
 
 fn assert_dimensions(component: &dyn Component, expected: (u16, u16)) {
     let dimensions = component.declare_dimensions();

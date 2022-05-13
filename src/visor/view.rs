@@ -2,7 +2,7 @@ use crate::visor::{terminal_writer::RootedRenderer, Coords};
 use derive_builder::Builder;
 use std::fmt::Debug;
 
-use super::{terminal_writer::TerminalBackend, Component};
+use super::Component;
 
 pub struct TextView {
     contents: String,
@@ -31,7 +31,7 @@ impl TextView {
 }
 
 impl Component for TextView {
-    fn render(&self, writer: &mut dyn TerminalBackend) {
+    fn render(&self, writer: &mut RootedRenderer) {
         let mut iter = self.contents.lines().peekable();
 
         while let Some(line) = iter.next() {
@@ -110,7 +110,7 @@ impl Component for Panel<'_> {
         self.component.handle(e)
     }
 
-    fn render(&self, writer: &mut dyn TerminalBackend) {
+    fn render(&self, writer: &mut RootedRenderer) {
         let (w, h) = self.declare_dimensions();
         self.draw_header(writer);
 
@@ -120,12 +120,12 @@ impl Component for Panel<'_> {
             writer.reset_cursor();
             writer.set_cursor_to(Coords(0, i));
             writer.write("│");
-            writer.set_cursor_to(Coords(w-1, i));
+            writer.set_cursor_to(Coords(w - 1, i));
             writer.write("│");
         }
 
-        let subroot = Coords(1 + horizontal_padding, 1 + vertical_padding);
-        let mut rooted = RootedRenderer::new(writer, subroot);
+        let subroot = Coords(1 + horizontal_padding, 1 + vertical_padding); // +1 for the border
+        let mut rooted = RootedRenderer::subrooted(writer, subroot);
         rooted.reset_cursor();
         self.component.render(&mut rooted);
         writer.reset_cursor();
@@ -133,11 +133,11 @@ impl Component for Panel<'_> {
             let beginning = Coords(0, i);
             writer.set_cursor_to(beginning);
             writer.write("│");
-            let end = Coords(w-1, i);
+            let end = Coords(w - 1, i);
             writer.set_cursor_to(end);
             writer.write("│");
         }
-        writer.set_cursor_to(Coords(0, h-1));
+        writer.set_cursor_to(Coords(0, h - 1));
         writer.write("└");
         writer.write(&"─".repeat((w - 2).into()));
         writer.write("┘");
@@ -145,7 +145,7 @@ impl Component for Panel<'_> {
 }
 
 impl Panel<'_> {
-    fn draw_header(&self, writer: &mut dyn TerminalBackend) {
+    fn draw_header(&self, writer: &mut RootedRenderer) {
         let (w, _h) = self.declare_dimensions();
         writer.write("┌");
         match &self.name {

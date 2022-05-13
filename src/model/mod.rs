@@ -10,10 +10,10 @@ use std::{
 
 use self::patternline::PatternLine;
 
-pub mod player;
-pub mod view;
 pub mod bag;
 pub mod patternline;
+pub mod player;
+pub mod view;
 
 pub enum AppEvent {
     SelectNext,
@@ -179,27 +179,38 @@ impl Factory {
     }
 
     pub fn find_last_tile(&self) -> Option<Tile> {
-        self.0.map(|tiles| tiles.last().copied()).flatten()
+        self.0.and_then(|tiles| tiles.last().copied())
     }
 
     pub fn get_tiles(&self) -> Option<&[Tile]> {
-        self.0.as_ref()
-        .map(|t| t.as_slice())
+        self.0.as_ref().map(|t| t.as_slice())
     }
 
     pub fn count_tile(&self, tile: Tile) -> usize {
         match self.get_tiles() {
             Some(tiles) => tiles.iter().filter(|&&t| t == tile).count(),
-            None => 0
+            None => 0,
         }
     }
 
-    pub fn pick(&mut self, picked_tile: Tile, common_area: &mut CommonArea, pattern_line: &mut PatternLine) -> Result<(), String> {
-        let tiles = self.0.as_ref().ok_or_else(|| String::from("You tried picking an empty factory"))?;
+    pub fn pick(
+        &mut self,
+        picked_tile: Tile,
+        common_area: &mut CommonArea,
+        pattern_line: &mut PatternLine,
+    ) -> Result<(), String> {
+        let tiles = self
+            .0
+            .as_ref()
+            .ok_or_else(|| String::from("You tried picking an empty factory"))?;
         if !tiles.contains(&picked_tile) {
-            return Err(format!("You tried picking tile {} from a factory that does not have it", picked_tile));
+            return Err(format!(
+                "You tried picking tile {} from a factory that does not have it",
+                picked_tile
+            ));
         }
-        let (picked, non_picked): (Vec<Tile>, Vec<Tile>) = tiles.iter().partition(|&tile| tile == &picked_tile);
+        let (picked, non_picked): (Vec<Tile>, Vec<Tile>) =
+            tiles.iter().partition(|&tile| tile == &picked_tile);
         pattern_line.accept(picked_tile, picked.len())?;
         common_area.add(&non_picked);
         self.0 = None;
@@ -346,7 +357,7 @@ pub enum GameState {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::{Tile, Factory};
+    use crate::model::{Factory, Tile};
 
     #[test]
     fn test_count_tile() {

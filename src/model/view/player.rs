@@ -1,15 +1,20 @@
-use crate::{visor::{Component, view::PanelBuilder, layout::Layout}, model::player::{Player, BuildingAreaView}};
+use crate::{
+    model::player::{BuildingAreaView, Player},
+    visor::{layout::Layout, view::PanelBuilder, Component},
+};
 
 pub struct PlayerView<'a> {
-    player: &'a Player
+    player: &'a Player,
 }
 
 impl<'a> PlayerView<'a> {
-    pub fn new(player: &'a Player) -> Self { Self { player } }
+    pub fn new(player: &'a Player) -> Self {
+        Self { player }
+    }
 }
 
 impl<'a> Component for PlayerView<'a> {
-    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
+    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
         BuildingAreaView::new(self.player.get_buildingarea()).render(writer);
     }
 
@@ -19,24 +24,31 @@ impl<'a> Component for PlayerView<'a> {
 }
 
 pub struct PlayerAreaView<'a> {
-    players: &'a [Player]
+    players: &'a [Player],
 }
 
 impl<'a> PlayerAreaView<'a> {
-    pub fn new(players: &'a [Player]) -> Self { Self { players } }
+    pub fn new(players: &'a [Player]) -> Self {
+        Self { players }
+    }
 }
 
 impl<'a> Component for PlayerAreaView<'a> {
-    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
-        let players: Vec<Box<dyn Component>> = self.players.iter().map(|p| {
-            let p = PanelBuilder::default()
-                .name(p.get_name().to_owned())
-                .padding(0)
-                .component(Box::new(PlayerView::new(p)))
-                .build().unwrap();
+    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
+        let players: Vec<Box<dyn Component>> = self
+            .players
+            .iter()
+            .map(|p| {
+                let p = PanelBuilder::default()
+                    .name(p.get_name().to_owned())
+                    .padding(0)
+                    .component(Box::new(PlayerView::new(p)))
+                    .build()
+                    .unwrap();
 
-            Box::new(p) as Box<_>
-        }).collect();
+                Box::new(p) as Box<_>
+            })
+            .collect();
         let panel = PanelBuilder::default()
             .name(String::from("Player area"))
             .component(Box::new(Layout::horizontal(0, players)))

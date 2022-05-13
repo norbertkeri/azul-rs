@@ -4,13 +4,13 @@ pub mod layout;
 pub mod terminal_writer;
 pub mod view;
 
-use self::terminal_writer::{DebuggableTerminalBackend, TerminalBackend, RootedRenderer};
+use self::terminal_writer::{DebuggableTerminalBackend, RootedRenderer, TerminalBackend};
 use crate::model::AppEvent;
-use std::ops::Add;
 use std::fmt::Debug;
+use std::ops::Add;
 
 pub trait Component {
-    fn render(&self, writer: &mut dyn TerminalBackend);
+    fn render(&self, writer: &mut RootedRenderer);
     fn declare_dimensions(&self) -> (u16, u16);
     fn handle(&mut self, _event: &UserInput) -> UserEventHandled {
         UserEventHandled::Noop
@@ -32,6 +32,14 @@ pub struct Move(i16, i16);
 impl Default for Coords {
     fn default() -> Self {
         Self(1, 1)
+    }
+}
+
+impl Add<(u16, u16)> for Coords {
+    type Output = Coords;
+
+    fn add(self, rhs: (u16, u16)) -> Self::Output {
+        Coords(self.0 + rhs.0, self.1 + rhs.1)
     }
 }
 

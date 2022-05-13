@@ -29,7 +29,7 @@ impl TileView {
 }
 
 impl Component for TileView {
-    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
+    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
         let s = if self.selected {
             format!("|{}|", self.tile)
         } else {
@@ -69,7 +69,7 @@ impl<'a> FactoryView<'a> {
     fn has_selected_tile(&self) -> bool {
         match (self.factory.get_tiles(), self.selected_tile) {
             (Some(tiles), Some(selected_tile)) => tiles.contains(&selected_tile),
-            _ => false
+            _ => false,
         }
     }
 }
@@ -81,7 +81,7 @@ impl<'a> From<FactoryView<'a>> for Box<dyn Component + 'a> {
 }
 
 impl Component for FactoryView<'_> {
-    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
+    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
         let mut began_selection = false;
         if let Some(tiles) = self.factory.get_tiles() {
             let mut iter = tiles.iter().peekable();
@@ -137,7 +137,7 @@ struct FactoryAreaView {
 }
 
 impl Component for FactoryAreaView {
-    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
+    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
         let factory_views: Vec<_> = self
             .factories
             .iter()
@@ -177,7 +177,7 @@ pub struct GameView<const N: usize> {
 }
 
 impl<const N: usize> Component for GameView<N> {
-    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
+    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
         let game = self.game.as_ref().borrow();
         let factory_state = match game.state {
             GameState::PickFactory {
@@ -200,7 +200,10 @@ impl<const N: usize> Component for GameView<N> {
         let player_area = PlayerAreaView::new(game.get_players());
 
         let gameview = PanelBuilder::default()
-            .component(Box::new(Layout::vertical(1, vec![Box::new(player_area), Box::new(factory_area)])))
+            .component(Box::new(Layout::vertical(
+                1,
+                vec![Box::new(player_area), Box::new(factory_area)],
+            )))
             .build()
             .unwrap();
         gameview.render(writer);

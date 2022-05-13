@@ -1,15 +1,17 @@
-use std::cmp::min;
-use rand::{prelude::SliceRandom, thread_rng};
 use super::Tile;
+use rand::{prelude::SliceRandom, thread_rng};
+use std::cmp::min;
 
 #[derive(Debug)]
 pub struct Bag {
     tiles: Vec<Tile>,
-    discards: Vec<Tile>
+    discards: Vec<Tile>,
 }
 
 impl Bag {
-    pub fn new(tiles: Vec<Tile>, discards: Vec<Tile>) -> Self { Self { tiles, discards } }
+    pub fn new(tiles: Vec<Tile>, discards: Vec<Tile>) -> Self {
+        Self { tiles, discards }
+    }
 
     pub fn draw(&mut self, how_many: usize) -> Vec<Tile> {
         let can_draw = min(self.tiles.len(), how_many);
@@ -38,7 +40,7 @@ impl Default for Bag {
         tiles.shuffle(&mut thread_rng());
         Bag {
             tiles,
-            discards: vec![]
+            discards: vec![],
         }
     }
 }
@@ -46,7 +48,6 @@ impl Default for Bag {
 #[cfg(test)]
 mod tests {
     use crate::model::{bag::Bag, Tile};
-
 
     #[test]
     pub fn test_drawing_after_reshuffling() {

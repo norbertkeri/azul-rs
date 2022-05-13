@@ -9,6 +9,14 @@ pub struct RootedRenderer<'a> {
 }
 
 impl<'a> RootedRenderer<'a> {
+    pub fn subrooted(root: &'a mut RootedRenderer, shift_root: Coords) -> Self {
+        Self::new(root.writer, root.root + shift_root)
+    }
+
+    pub fn get_root(&self) -> Coords {
+        self.root
+    }
+
     pub fn new(writer: &'a mut dyn TerminalBackend, root: Coords) -> Self {
         Self {
             writer,
@@ -20,43 +28,26 @@ impl<'a> RootedRenderer<'a> {
     pub fn get_drawn_area(&self) -> (u16, u16) {
         self.drawn_area
     }
-}
 
-impl<'a> TerminalBackend for RootedRenderer<'a> {
-    fn clear(&mut self) {
-        panic!("You are not supposed to call clear");
+    pub fn write(&mut self, s: &str) {
+        self.writer.write(s);
     }
 
-    fn set_cursor_to(&mut self, coords: Coords) {
+    pub fn set_cursor_to(&mut self, coords: Coords) {
         let new_coords = self.root + coords;
         self.writer.set_cursor_to(new_coords);
     }
 
-    fn write(&mut self, text: &str) {
-        self.writer.write(text);
-    }
-
-    fn reset_cursor(&mut self) {
+    pub fn reset_cursor(&mut self) {
         self.writer.set_cursor_to(self.root);
     }
-
-    fn flush(&mut self) {
-        self.writer.flush();
-    }
-
-    fn get_root(&self) -> Coords {
-        self.root
-    }
-
 }
 
 pub trait TerminalBackend {
     fn clear(&mut self);
     fn set_cursor_to(&mut self, coords: Coords);
     fn write(&mut self, text: &str);
-    fn reset_cursor(&mut self);
     fn flush(&mut self);
-    fn get_root(&self) -> Coords;
 }
 
 pub trait DebuggableTerminalBackend: TerminalBackend {
@@ -65,15 +56,11 @@ pub trait DebuggableTerminalBackend: TerminalBackend {
 
 pub struct TermionBackend {
     sink: Box<dyn Write>,
-    root: Coords,
 }
 
 impl TermionBackend {
     pub fn new(sink: Box<dyn Write>) -> Self {
-        Self {
-            sink,
-            root: Default::default(),
-        }
+        Self { sink }
     }
 }
 
@@ -90,7 +77,6 @@ impl TerminalBackend for TermionBackend {
             termion::cursor::Goto(1, 1),
         )
         .unwrap();
-        self.root = Default::default();
     }
 
     fn set_cursor_to(&mut self, coords: Coords) {
@@ -100,20 +86,11 @@ impl TerminalBackend for TermionBackend {
     fn write(&mut self, text: &str) {
         write!(self.sink, "{}", text).unwrap();
     }
-
-    fn reset_cursor(&mut self) {
-        self.set_cursor_to(self.root);
-    }
-
-    fn get_root(&self) -> Coords {
-        self.root
-    }
 }
 
 pub struct TestBackend {
     cursor: Coords,
     screen: Vec<String>,
-    root: Coords,
 }
 
 impl Default for TestBackend {
@@ -121,7 +98,6 @@ impl Default for TestBackend {
         Self {
             cursor: (1, 1).into(),
             screen: Default::default(),
-            root: (1, 1).into(),
         }
     }
 }
@@ -133,9 +109,6 @@ impl TerminalBackend for TestBackend {
     }
 
     fn set_cursor_to(&mut self, coords: Coords) {
-        if coords == Coords(5,5) {
-            panic!();
-        }
         self.cursor = coords;
     }
 
@@ -166,15 +139,7 @@ impl TerminalBackend for TestBackend {
         }
     }
 
-    fn reset_cursor(&mut self) {
-        self.cursor = self.root;
-    }
-
     fn flush(&mut self) {}
-
-    fn get_root(&self) -> Coords {
-        self.root
-    }
 }
 
 impl DebuggableTerminalBackend for TestBackend {

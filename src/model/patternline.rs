@@ -1,6 +1,6 @@
 use crate::visor::Component;
 
-use super::{Tile, Pickable, bag::Bag};
+use super::{bag::Bag, Pickable, Tile};
 
 #[derive(Debug, PartialEq)]
 pub enum PatternLine {
@@ -84,7 +84,7 @@ impl PatternLine {
     pub fn length(&self) -> usize {
         match *self {
             PatternLine::Free { length } => length,
-            PatternLine::Taken { length, .. } => length
+            PatternLine::Taken { length, .. } => length,
         }
     }
 }
@@ -92,7 +92,6 @@ impl PatternLine {
 pub struct FloorLine([Pickable; 6]);
 
 impl FloorLine {
-
     pub fn reset(&mut self, _bag: &mut Bag) -> u8 {
         0
     }
@@ -100,11 +99,13 @@ impl FloorLine {
 
 #[derive(Debug)]
 pub struct PatternLineView<'a> {
-    line: &'a PatternLine
+    line: &'a PatternLine,
 }
 
 impl<'a> PatternLineView<'a> {
-    pub fn new(line: &'a PatternLine) -> Self { Self { line } }
+    pub fn new(line: &'a PatternLine) -> Self {
+        Self { line }
+    }
 }
 
 impl<'a> From<PatternLineView<'a>> for Box<dyn Component + 'a> {
@@ -114,16 +115,20 @@ impl<'a> From<PatternLineView<'a>> for Box<dyn Component + 'a> {
 }
 
 impl<'a> Component for PatternLineView<'a> {
-    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
+    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
         match *self.line {
             PatternLine::Free { length } => {
                 writer.write(&format!("{: >5}", "☐".repeat(length)));
-            },
-            PatternLine::Taken { tile, length, taken } => {
+            }
+            PatternLine::Taken {
+                tile,
+                length,
+                taken,
+            } => {
                 let mut output = String::from(&"☐".repeat(length - taken));
                 output.push_str(&tile.to_string().repeat(taken));
                 writer.write(&format!("{: >5}", output));
-            },
+            }
         }
     }
 

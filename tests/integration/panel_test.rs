@@ -1,4 +1,7 @@
-use furnace::visor::{view::{PanelBuilder, TextView}, layout::Layout};
+use furnace::visor::{
+    layout::Layout,
+    view::{PanelBuilder, TextView},
+};
 
 use crate::helpers::expect_component;
 
@@ -89,13 +92,16 @@ fn test_panel_with_name_even() {
 
 #[test]
 fn test_two_panels_horizontally() {
-    let hellos = ["Hello", "Hello"].into_iter().map(|s| {
-        let panel = PanelBuilder::default()
-        .component(Box::new(TextView::new(String::from(s))) as Box<_>)
-        .build()
-        .unwrap();
-        Box::new(panel) as Box<_>
-    }).collect();
+    let hellos = ["Hello", "Hello"]
+        .into_iter()
+        .map(|s| {
+            let panel = PanelBuilder::default()
+                .component(Box::new(TextView::new(String::from(s))) as Box<_>)
+                .build()
+                .unwrap();
+            Box::new(panel) as Box<_>
+        })
+        .collect();
     let panel = PanelBuilder::default()
         .component(Box::new(Layout::horizontal(0, hellos)))
         .build()
@@ -112,13 +118,16 @@ fn test_two_panels_horizontally() {
 
 #[test]
 fn test_panel_in_layout_in_panel() {
-    let hellos = ["Hello"].into_iter().map(|s| {
-        let panel = PanelBuilder::default()
-        .component(Box::new(TextView::new(String::from(s))) as Box<_>)
-        .build()
-        .unwrap();
-        Box::new(panel) as Box<_>
-    }).collect();
+    let hellos = ["Hello"]
+        .into_iter()
+        .map(|s| {
+            let panel = PanelBuilder::default()
+                .component(Box::new(TextView::new(String::from(s))) as Box<_>)
+                .build()
+                .unwrap();
+            Box::new(panel) as Box<_>
+        })
+        .collect();
     let panel = PanelBuilder::default()
         .component(Box::new(Layout::horizontal(0, hellos)))
         .build()
@@ -157,7 +166,8 @@ fn test_panel_in_panel() {
 
 #[test]
 fn test_vertical_layout_linebreaks() {
-    let hellos: [Box<_>; 3] = ["Hello", "world", "again"].map(|s| Box::new(TextView::from(s)) as Box<_>);
+    let hellos: [Box<_>; 3] =
+        ["Hello", "world", "again"].map(|s| Box::new(TextView::from(s)) as Box<_>);
     let panel = Layout::vertical(0, Vec::from(hellos));
     let expected = r#"Hello
 world

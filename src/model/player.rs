@@ -1,6 +1,6 @@
 use std::usize;
 
-use crate::visor::{Component, Coords};
+use crate::visor::Component;
 
 use super::patternline::{PatternLine, PatternLineView};
 
@@ -53,7 +53,7 @@ impl Default for BuildingArea {
 }
 
 pub struct BuildingAreaView<'a> {
-    buildingarea: &'a BuildingArea
+    buildingarea: &'a BuildingArea,
 }
 
 impl<'a> BuildingAreaView<'a> {
@@ -62,12 +62,11 @@ impl<'a> BuildingAreaView<'a> {
     }
 }
 
-
 impl<'a> Component for BuildingAreaView<'a> {
-    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
+    fn render(&self, writer: &mut crate::visor::terminal_writer::RootedRenderer) {
         for (i, pl) in self.buildingarea.get_rows().iter().enumerate() {
             PatternLineView::new(pl).render(writer);
-            let next = (i+1) as u16;
+            let next = (i + 1) as u16;
             writer.set_cursor_to((0, next).into());
         }
     }

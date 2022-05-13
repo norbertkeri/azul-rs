@@ -1,9 +1,6 @@
 use std::cmp::max;
 
-use super::{
-    terminal_writer::{RootedRenderer, TerminalBackend},
-    Component, UserEventHandled, Coords,
-};
+use super::{terminal_writer::RootedRenderer, Component, Coords, UserEventHandled};
 
 pub type Components<'a> = Vec<Box<dyn Component + 'a>>;
 
@@ -51,11 +48,10 @@ pub enum Direction {
 }
 
 impl<'a> Component for Layout<'a> {
-    fn render(&self, writer: &mut dyn TerminalBackend) {
+    fn render(&self, renderer: &mut RootedRenderer) {
         let mut dims = Coords(0, 0);
         for component in self.components.iter() {
-            writer.reset_cursor();
-            let mut rooted = RootedRenderer::new(writer, dims);
+            let mut rooted = RootedRenderer::subrooted(renderer, dims);
             rooted.reset_cursor();
             component.render(&mut rooted);
             let dimensions = component.declare_dimensions();
@@ -64,7 +60,6 @@ impl<'a> Component for Layout<'a> {
                 Direction::Vertical => (0, dimensions.1).into(),
             };
             dims = dims + move_root_by;
-            writer.set_cursor_to(move_root_by);
         }
     }
 
