@@ -54,7 +54,6 @@ pub enum UserEventHandled {
 }
 
 pub enum UserInput {
-    Direction,
     Character(char),
     Confirm,
     Back,

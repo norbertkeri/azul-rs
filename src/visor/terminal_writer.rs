@@ -5,11 +5,16 @@ use super::Coords;
 pub struct RootedRenderer<'a> {
     writer: &'a mut dyn TerminalBackend,
     root: Coords,
+    drawn_area: (u16, u16)
 }
 
 impl<'a> RootedRenderer<'a> {
     pub fn new(writer: &'a mut dyn TerminalBackend, root: Coords) -> Self {
-        Self { writer, root }
+        Self { writer, root, drawn_area: (0, 0) }
+    }
+
+    pub fn get_drawn_area(&self) -> (u16, u16) {
+        self.drawn_area
     }
 }
 

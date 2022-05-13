@@ -1,15 +1,23 @@
 #![allow(dead_code)]
 
 use rand::{distributions::Standard, prelude::Distribution};
-use std::fmt::Debug;
+use std::{fmt::Debug, rc::Rc};
 
 pub mod view;
 
-pub struct AppEvent {
+pub enum AppEvent {
+    SelectNext,
+    SelectPrev,
 }
 
 pub struct Player {
     name: String,
+}
+
+impl Player {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
 }
 
 pub enum Slot {
@@ -78,7 +86,18 @@ impl ToString for Pickable {
 
 pub struct CommonArea(Vec<Pickable>);
 
-pub struct Factory(pub [Tile; 4]);
+pub struct Factory([Tile; 4]);
+
+impl Factory {
+    pub fn new(mut tiles: [Tile; 4]) -> Self {
+        tiles.sort();
+        Self(tiles)
+    }
+
+    pub fn get_tiles(&self) -> &[Tile] {
+        &self.0
+    }
+}
 
 impl Factory {
     pub fn new_random() -> Self {
@@ -92,8 +111,36 @@ impl Factory {
     }
 }
 
-struct Game<const N: usize> {
-    players: [Player; N]
+pub struct Game<const N: usize> {
+    players: [Player; N],
+    factories: [Rc<Factory>; 4],
+    state: GameState
+}
+
+impl<const N: usize> Game<N> {
+    pub fn for_players(players: [Player; N]) -> Self {
+        let factories = Self::generate_factories();
+        Game {
+            players,
+            factories,
+            state: GameState::PickFactory { player_id: 0, current_factory: 0 }
+        }
+    }
+
+    pub fn get_factories(&self) -> &[Rc<Factory>] {
+        &self.factories
+    }
+
+    fn generate_factories() -> [Rc<Factory>; 4] {
+        [0,1,2,3].map(|_| {
+            Rc::new(Factory::new_random())
+        })
+    }
+
+}
+
+pub enum GameState {
+    PickFactory { player_id: usize, current_factory: usize }
 }
 
 struct BuildingArea([PatternLine; 5]);

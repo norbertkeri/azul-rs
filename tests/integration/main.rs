@@ -5,6 +5,7 @@ mod helpers;
 mod layout_test;
 mod panel_test;
 mod model_views;
+mod renderer;
 
 fn testdata(data: &str) -> &str {
     data.trim_start()
