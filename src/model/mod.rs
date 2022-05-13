@@ -11,17 +11,15 @@ use std::{
 };
 
 use self::bag::Bag;
-use self::patternline::PatternLine;
+use self::buildingarea::patternline::PatternLine;
 use self::tilecollection::{HasTileCollection, TileCollection};
 use self::view::render_pickables;
 
 pub mod bag;
-pub mod floorline;
-pub mod patternline;
+pub mod buildingarea;
 pub mod player;
 pub mod tilecollection;
 pub mod view;
-pub mod wall;
 
 pub enum AppEvent {
     Select(Direction),

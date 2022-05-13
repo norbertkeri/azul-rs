@@ -1,5 +1,5 @@
 use crate::util::eq_lists;
-use azulrs::model::{patternline::PatternLine, CommonArea, Factory, Tile};
+use azulrs::model::{buildingarea::patternline::PatternLine, CommonArea, Factory, Tile};
 
 #[test]
 fn test_picking_tiles_from_factory() {

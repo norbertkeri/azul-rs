@@ -1,8 +1,5 @@
 use crate::{
-    model::{
-        player::{BuildingAreaView, Player},
-        Game, GameState,
-    },
+    model::{buildingarea::BuildingAreaView, player::Player, Game, GameState},
     visor::{layout::Layout, renderer::RootedRenderer, view::PanelBuilder, Component},
 };
 

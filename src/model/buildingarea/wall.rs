@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use crate::visor::{renderer, Component};
+use crate::{
+    model::Tile,
+    visor::{renderer, Component},
+};
 
-use super::{player::Slot, Tile};
+use super::Slot;
 
 const AREA_LENGTH: usize = 5;
 
@@ -179,8 +182,9 @@ impl<'a> Component for WallView<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::model::buildingarea::wall::FillResult;
+
     use super::{Wall, AREA_LENGTH};
-    use crate::model::wall::FillResult;
     use std::collections::BTreeMap;
     use test_case::test_case;
 

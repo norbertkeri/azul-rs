@@ -1,4 +1,4 @@
-use azulrs::model::patternline::PatternLine;
+use azulrs::model::buildingarea::patternline::{PatternLine, PatternLineView};
 use test_case::test_case;
 
 use azulrs::model::{
@@ -48,8 +48,8 @@ fn test_factoryview_selected() {
 #[test_case("      ☐☐", PatternLine::new_free(2); "can render a free patternline")]
 fn test_patternline_rendering(
     expected: &str,
-    patternline: azulrs::model::patternline::PatternLine,
+    patternline: azulrs::model::buildingarea::patternline::PatternLine,
 ) {
-    let view = azulrs::model::patternline::PatternLineView::new(&patternline, false);
+    let view = PatternLineView::new(&patternline, false);
     expect_component(view, expected);
 }
