@@ -3,8 +3,8 @@ use helpers::{expect_component, to_textviews};
 
 mod helpers;
 mod layout_test;
-mod panel_test;
 mod model_views;
+mod panel_test;
 mod renderer;
 
 fn testdata(data: &str) -> &str {

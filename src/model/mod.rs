@@ -1,35 +1,26 @@
 #![allow(dead_code)]
 
-use rand::{distributions::Standard, prelude::Distribution};
-use std::{fmt::Debug, rc::Rc};
+use crate::model::player::Player;
+use rand::{distributions::Standard, prelude::{Distribution, SliceRandom}, thread_rng};
+use std::{
+    fmt::{Debug, Display},
+    rc::Rc,
+    str::FromStr, cmp::min,
+};
 
+pub mod player;
 pub mod view;
-pub mod gamestate;
+pub mod bag;
 
 pub enum AppEvent {
     SelectNext,
     SelectPrev,
-    TransitionToPickTileFromFactory { factory_id: usize, tile: Tile }
-}
-
-pub struct Player {
-    name: String,
-}
-
-impl Player {
-    pub fn new(name: String) -> Self {
-        Self { name }
-    }
+    TransitionToPickTileFromFactory { factory_id: usize, tile: Tile },
 }
 
 pub enum Slot {
     Empty,
-    Tile(Tile)
-}
-
-pub enum MinusPoints {
-    FirstPlayerToken,
-    Tile(Tile)
+    Tile(Tile),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -60,28 +51,47 @@ impl Distribution<Tile> for Standard {
     }
 }
 
-impl ToString for Tile {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for Tile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
             Tile::Yellow => "Y",
             Tile::Red => "R",
             Tile::Blue => "B",
             Tile::Green => "G",
-            Tile::White => "W"
-        }.into()
+            Tile::White => "W",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for Tile {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 1 {
+            return Err("You can only create tiles from single character strings".into());
+        }
+        match s.chars().next().unwrap() {
+            'Y' => Ok(Tile::Yellow),
+            'R' => Ok(Tile::Red),
+            'B' => Ok(Tile::Blue),
+            'G' => Ok(Tile::Green),
+            'W' => Ok(Tile::White),
+            c => Err(format!("Invalid tile character: {}", c)),
+        }
     }
 }
 
 pub enum Pickable {
     FirstPlayerToken,
-    Tile(Tile)
+    Tile(Tile),
 }
 
 impl ToString for Pickable {
     fn to_string(&self) -> String {
         match self {
             Pickable::FirstPlayerToken => String::from("1"),
-            Pickable::Tile(t) => t.to_string()
+            Pickable::Tile(t) => t.to_string(),
         }
     }
 }
@@ -93,7 +103,6 @@ pub struct Factory([Tile; 4]);
 impl Factory {
     pub fn new(mut tiles: [Tile; 4]) -> Self {
         tiles.sort();
-        dbg!(&tiles);
         Self(tiles)
     }
 
@@ -109,20 +118,26 @@ impl Factory {
 
     pub fn find_before(&self, before: Tile) -> Tile {
         let distinct = self.distinct_tiles();
-        let i = distinct.iter().position(|maybe_t| maybe_t == &before).expect("This tile is not in the factory?");
+        let i = distinct
+            .iter()
+            .position(|maybe_t| maybe_t == &before)
+            .expect("This tile is not in the factory?");
         if i == 0 {
             return *distinct.last().unwrap();
         }
-        distinct[i-1]
+        distinct[i - 1]
     }
 
     pub fn find_after(&self, after: Tile) -> Tile {
         let distinct = self.distinct_tiles();
-        let i = distinct.iter().position(|maybe_t| maybe_t == &after).expect("This tile is not in the factory?");
+        let i = distinct
+            .iter()
+            .position(|maybe_t| maybe_t == &after)
+            .expect("This tile is not in the factory?");
         if i == distinct.len() - 1 {
             return *distinct.first().unwrap();
         }
-        distinct[i+1]
+        distinct[i + 1]
     }
 
     pub fn find_first_tile(&self) -> Tile {
@@ -153,7 +168,7 @@ impl Factory {
 pub struct Game<const N: usize> {
     players: [Player; N],
     factories: [Rc<Factory>; 4],
-    state: GameState
+    state: GameState,
 }
 
 impl<const N: usize> Game<N> {
@@ -174,7 +189,10 @@ impl<const N: usize> Game<N> {
         Game {
             players,
             factories,
-            state: GameState::PickFactory { player_id: 0, current_factory: 0 }
+            state: GameState::PickFactory {
+                player_id: 0,
+                current_factory: 0,
+            },
         }
     }
 
@@ -183,66 +201,87 @@ impl<const N: usize> Game<N> {
     }
 
     fn generate_factories() -> [Rc<Factory>; 4] {
-        [0,1,2,3].map(|_| {
-            Rc::new(Factory::new_random())
-        })
+        [0, 1, 2, 3].map(|_| Rc::new(Factory::new_random()))
     }
 
     pub fn handle(&mut self, e: AppEvent) {
         let new_e = match e {
-            AppEvent::SelectNext => {
-                match self.state {
-                    GameState::PickFactory { player_id, current_factory } => {
-                        GameState::PickFactory { player_id, current_factory: current_factory + 1 }
-                    },
-                    GameState::PickTileFromFactory { player_id, factory_id, selected_tile } => {
-                        let next_tile = self.find_next_tile_in_factory_after(factory_id, selected_tile);
-                        GameState::PickTileFromFactory { player_id, factory_id, selected_tile: next_tile }
-                    },
+            AppEvent::SelectNext => match self.state {
+                GameState::PickFactory {
+                    player_id,
+                    current_factory,
+                } => GameState::PickFactory {
+                    player_id,
+                    current_factory: current_factory + 1,
+                },
+                GameState::PickTileFromFactory {
+                    player_id,
+                    factory_id,
+                    selected_tile,
+                } => {
+                    let next_tile = self.find_next_tile_in_factory_after(factory_id, selected_tile);
+                    GameState::PickTileFromFactory {
+                        player_id,
+                        factory_id,
+                        selected_tile: next_tile,
+                    }
                 }
             },
-            AppEvent::SelectPrev => {
-                match self.state {
-                    GameState::PickFactory { player_id, current_factory } => {
-                        GameState::PickFactory { player_id, current_factory: current_factory - 1 }
-                    },
-                    GameState::PickTileFromFactory { player_id, factory_id, selected_tile } => {
-                        let next_tile = self.find_prev_tile_in_factory_after(factory_id, selected_tile);
-                        GameState::PickTileFromFactory { player_id, factory_id, selected_tile: next_tile }
-                    },
+            AppEvent::SelectPrev => match self.state {
+                GameState::PickFactory {
+                    player_id,
+                    current_factory,
+                } => GameState::PickFactory {
+                    player_id,
+                    current_factory: current_factory - 1,
+                },
+                GameState::PickTileFromFactory {
+                    player_id,
+                    factory_id,
+                    selected_tile,
+                } => {
+                    let next_tile = self.find_prev_tile_in_factory_after(factory_id, selected_tile);
+                    GameState::PickTileFromFactory {
+                        player_id,
+                        factory_id,
+                        selected_tile: next_tile,
+                    }
                 }
-            }
-            AppEvent::TransitionToPickTileFromFactory { factory_id, tile } => {
-                match self.state {
-                    GameState::PickFactory { player_id, current_factory } => {
-                        GameState::PickTileFromFactory { player_id, factory_id: current_factory, selected_tile: tile }
-                    },
-                    GameState::PickTileFromFactory { player_id, factory_id, selected_tile } => {
-                        todo!()
-                    },
+            },
+            AppEvent::TransitionToPickTileFromFactory {
+                factory_id: _,
+                tile,
+            } => match self.state {
+                GameState::PickFactory {
+                    player_id,
+                    current_factory,
+                } => GameState::PickTileFromFactory {
+                    player_id,
+                    factory_id: current_factory,
+                    selected_tile: tile,
+                },
+                GameState::PickTileFromFactory {
+                    player_id: _,
+                    factory_id: _,
+                    selected_tile: _,
+                } => {
+                    todo!()
                 }
-
             },
         };
 
         self.state = new_e;
     }
-
 }
 
 pub enum GameState {
-    PickFactory { player_id: usize, current_factory: usize },
-    PickTileFromFactory { player_id: usize, factory_id: usize, selected_tile: Tile }
-}
-
-struct BuildingArea([PatternLine; 5]);
-
-struct PatternLine {
-    state: PatternState,
-    length: u8
-}
-
-enum PatternState {
-    Free,
-    Taken(Tile, u8)
+    PickFactory {
+        player_id: usize,
+        current_factory: usize,
+    },
+    PickTileFromFactory {
+        player_id: usize,
+        factory_id: usize,
+        selected_tile: Tile,
+    },
 }

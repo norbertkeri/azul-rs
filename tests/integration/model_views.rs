@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use furnace::model::{view::{TileView, FactoryView}, Tile, Factory};
+use furnace::model::{
+    view::{FactoryView, TileView},
+    Factory, Tile,
+};
 
 use crate::helpers::expect_component;
 
@@ -8,7 +11,7 @@ use crate::helpers::expect_component;
 fn test_tileview() {
     let view = TileView {
         tile: Tile::Yellow,
-        selected: false
+        selected: false,
     };
 
     expect_component(view, "Y");
@@ -18,7 +21,7 @@ fn test_tileview() {
 fn test_tileview_selected() {
     let view = TileView {
         tile: Tile::Yellow,
-        selected: true
+        selected: true,
     };
 
     expect_component(view, "|Y|");

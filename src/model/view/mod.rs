@@ -1,11 +1,16 @@
-use std::{rc::Rc, cell::RefCell};
-use crate::{visor::{Component, layout::Layout, UserInput, UserEventHandled}, model::GameState};
-use super::{Tile, Factory, Game, AppEvent};
+use super::{AppEvent, Factory, Game, Tile};
 use crate::visor::view::PanelBuilder;
+use crate::{
+    model::GameState,
+    visor::{layout::Layout, Component, UserEventHandled, UserInput},
+};
+use std::{cell::RefCell, rc::Rc};
+
+pub mod player;
 
 pub struct TileView {
     pub tile: Tile,
-    pub selected: bool
+    pub selected: bool,
 }
 
 impl From<TileView> for Box<dyn Component> {
@@ -15,13 +20,15 @@ impl From<TileView> for Box<dyn Component> {
 }
 
 impl TileView {
-    pub fn new(tile: Tile, selected: bool) -> Self { Self { tile, selected } }
+    pub fn new(tile: Tile, selected: bool) -> Self {
+        Self { tile, selected }
+    }
 }
 
 impl Component for TileView {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
         let s = if self.selected {
-            format!("|{}|", self.tile.to_string())
+            format!("|{}|", self.tile)
         } else {
             self.tile.to_string()
         };
@@ -44,11 +51,17 @@ impl Component for TileView {
 pub struct FactoryView {
     factory: Rc<Factory>,
     selected_tile: Option<Tile>,
-    is_selected: bool
+    is_selected: bool,
 }
 
 impl FactoryView {
-    pub fn new(factory: Rc<Factory>, selected_tile: Option<Tile>, is_selected: bool) -> Self { Self { factory, selected_tile, is_selected } }
+    pub fn new(factory: Rc<Factory>, selected_tile: Option<Tile>, is_selected: bool) -> Self {
+        Self {
+            factory,
+            selected_tile,
+            is_selected,
+        }
+    }
 
     fn has_selected_tile(&self) -> bool {
         matches!(self.selected_tile, Some(tile) if self.factory.as_ref().0.contains(&tile))
@@ -69,7 +82,9 @@ impl Component for FactoryView {
             writer.write("--> ");
         }
         while let Some(t) = iter.next() {
-            if !began_selection && matches!(self.selected_tile, Some(selected_tile) if &selected_tile == t) {
+            if !began_selection
+                && matches!(self.selected_tile, Some(selected_tile) if &selected_tile == t)
+            {
                 writer.write("|");
                 began_selection = true;
             }
@@ -79,7 +94,7 @@ impl Component for FactoryView {
                 let render_closing = match iter.peek() {
                     Some(next_tile) if *next_tile != &selected_tile => true,
                     None => true,
-                    _ => false
+                    _ => false,
                 };
                 if render_closing {
                     writer.write("|");
@@ -104,31 +119,34 @@ impl Component for FactoryView {
 pub enum FactoryAreaState {
     Passive,
     SelectFactory(usize), // TODO name this as currently_selected?
-    SelectTile { factory_id: usize, tile: Tile }
+    SelectTile { factory_id: usize, tile: Tile },
 }
 
 struct FactoryAreaView {
     factories: Vec<Rc<Factory>>,
-    state: FactoryAreaState
+    state: FactoryAreaState,
 }
 
 impl Component for FactoryAreaView {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
-        let factory_views: Vec<_> = self.factories.iter().enumerate().map(|(i, f)| {
-            let (is_selected, selected_tile): (bool, Option<Tile>) = match self.state {
-                FactoryAreaState::Passive => (false, None),
-                FactoryAreaState::SelectFactory(selected) => (i == selected, None),
-                FactoryAreaState::SelectTile { factory_id, tile } => {
-                    if factory_id == i {
-                        (factory_id == i, Some(tile))
-                    } else {
-                        (factory_id == i, None)
+        let factory_views: Vec<_> = self
+            .factories
+            .iter()
+            .enumerate()
+            .map(|(i, f)| {
+                let (is_selected, selected_tile): (bool, Option<Tile>) = match self.state {
+                    FactoryAreaState::SelectFactory(selected) => (i == selected, None),
+                    FactoryAreaState::SelectTile { factory_id, tile } if factory_id == i => {
+                        (true, Some(tile))
                     }
-                }
-            };
-            let view = FactoryView::new(f.clone(), selected_tile, is_selected);
-            Box::new(view) as Box<dyn Component>
-        }).collect();
+                    FactoryAreaState::SelectTile { .. } | FactoryAreaState::Passive => {
+                        (false, None)
+                    }
+                };
+                let view = FactoryView::new(f.clone(), selected_tile, is_selected);
+                Box::new(view) as Box<dyn Component>
+            })
+            .collect();
 
         let panel = PanelBuilder::default()
             .name("Factories")
@@ -146,24 +164,29 @@ impl Component for FactoryAreaView {
 }
 
 pub struct GameView<const N: usize> {
-    pub game: Rc<RefCell<Game<N>>>
+    pub game: Rc<RefCell<Game<N>>>,
 }
 
 impl<const N: usize> Component for GameView<N> {
     fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
         let game = self.game.as_ref().borrow();
         let factory_state = match game.state {
-            GameState::PickFactory { current_factory, .. } => {
-                FactoryAreaState::SelectFactory(current_factory)
-            }
-            GameState::PickTileFromFactory { selected_tile, factory_id, .. } => {
-                FactoryAreaState::SelectTile { factory_id, tile: selected_tile }
-            }
+            GameState::PickFactory {
+                current_factory, ..
+            } => FactoryAreaState::SelectFactory(current_factory),
+            GameState::PickTileFromFactory {
+                selected_tile,
+                factory_id,
+                ..
+            } => FactoryAreaState::SelectTile {
+                factory_id,
+                tile: selected_tile,
+            },
         };
         let factories: Vec<_> = game.get_factories().to_vec();
         let factory_area = FactoryAreaView {
             state: factory_state,
-            factories
+            factories,
         };
         factory_area.render(writer);
     }
@@ -176,32 +199,34 @@ impl<const N: usize> Component for GameView<N> {
         let game = self.game.as_ref().borrow();
         match e {
             UserInput::Character(c) => match game.state {
-                GameState::PickFactory { .. } => {
-                    match c {
-                        'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
-                        'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
-                        _ => UserEventHandled::Noop
-                    }
-                }
-                GameState::PickTileFromFactory { .. } => {
-                    match c {
-                        'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
-                        'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
-                        _ => UserEventHandled::Noop
-                    }
+                GameState::PickFactory { .. } => match c {
+                    'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
+                    'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
+                    _ => UserEventHandled::Noop,
+                },
+                GameState::PickTileFromFactory { .. } => match c {
+                    'j' => UserEventHandled::AppEvent(AppEvent::SelectNext),
+                    'k' => UserEventHandled::AppEvent(AppEvent::SelectPrev),
+                    _ => UserEventHandled::Noop,
                 },
             },
-            UserInput::Confirm => {
-                match game.state {
-                    GameState::PickFactory { player_id: _, current_factory } => {
-                        let tile = self.game.borrow().find_first_tile_in_factory(current_factory);
-                        UserEventHandled::AppEvent(AppEvent::TransitionToPickTileFromFactory { factory_id: current_factory, tile })
-                    }
-                    GameState::PickTileFromFactory { .. } => todo!(),
+            UserInput::Confirm => match game.state {
+                GameState::PickFactory {
+                    player_id: _,
+                    current_factory,
+                } => {
+                    let tile = self
+                        .game
+                        .borrow()
+                        .find_first_tile_in_factory(current_factory);
+                    UserEventHandled::AppEvent(AppEvent::TransitionToPickTileFromFactory {
+                        factory_id: current_factory,
+                        tile,
+                    })
                 }
+                GameState::PickTileFromFactory { .. } => todo!(),
             },
-            UserInput::Back => UserEventHandled::Noop
+            UserInput::Back => UserEventHandled::Noop,
         }
     }
-
 }
