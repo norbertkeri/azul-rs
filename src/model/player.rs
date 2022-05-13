@@ -1,6 +1,8 @@
 use std::usize;
 
-use super::patternline::PatternLine;
+use crate::visor::Component;
+
+use super::patternline::{PatternLine, PatternLineView};
 
 pub struct Player {
     name: String,
@@ -18,6 +20,14 @@ impl Player {
     pub fn default_with_name(name: String) -> Self {
         Self::new(name, BuildingArea::new())
     }
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn get_buildingarea(&self) -> &BuildingArea {
+        &self.building_area
+    }
 }
 
 pub struct BuildingArea([PatternLine; 5]);
@@ -30,6 +40,10 @@ impl BuildingArea {
     pub fn get_row(&self, row_number: usize) -> &PatternLine {
         &self.0[row_number]
     }
+
+    pub fn get_rows(&self) -> &[PatternLine] {
+        &self.0
+    }
 }
 
 impl Default for BuildingArea {
@@ -40,4 +54,23 @@ impl Default for BuildingArea {
 
 pub struct BuildingAreaView<'a> {
     buildingarea: &'a BuildingArea
+}
+
+impl<'a> BuildingAreaView<'a> {
+    pub fn new(buildingarea: &'a BuildingArea) -> Self {
+        Self { buildingarea }
+    }
+}
+
+
+impl<'a> Component for BuildingAreaView<'a> {
+    fn render(&self, writer: &mut dyn crate::visor::terminal_writer::TerminalBackend) {
+        for pl in self.buildingarea.get_rows() {
+            PatternLineView::new(pl).render(writer);
+        }
+    }
+
+    fn declare_dimensions(&self) -> (u16, u16) {
+        (5, 5)
+    }
 }

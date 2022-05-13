@@ -120,7 +120,6 @@ impl<'a> Component for PatternLineView<'a> {
                 writer.write(&"☐".repeat(length));
             },
             PatternLine::Taken { tile, length, taken } => {
-                dbg!(&self);
                 writer.write(&"☐".repeat(length - taken));
                 writer.write(&tile.to_string().repeat(taken));
             },

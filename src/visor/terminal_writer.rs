@@ -27,8 +27,8 @@ impl<'a> TerminalBackend for RootedRenderer<'a> {
         panic!("You are not supposed to call clear");
     }
 
-    fn set_cursor_to(&mut self, _coords: Coords) {
-        panic!("You are not supposed to call set_cursor_to");
+    fn set_cursor_to(&mut self, coords: Coords) {
+        self.writer.set_cursor_to(self.root + coords);
     }
 
     fn write(&mut self, text: &str) {

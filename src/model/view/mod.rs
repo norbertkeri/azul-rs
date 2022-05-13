@@ -1,3 +1,5 @@
+use self::player::PlayerAreaView;
+
 use super::{AppEvent, Factory, Game, Tile};
 use crate::visor::view::PanelBuilder;
 use crate::{
@@ -194,11 +196,16 @@ impl<const N: usize> Component for GameView<N> {
             state: factory_state,
             factories,
         };
-        factory_area.render(writer);
+        //factory_area.render(writer);
+        let player_area = PlayerAreaView::new(game.get_players());
+        //player_area.render(writer);
+
+        let layout = Layout::vertical(1, vec![Box::new(player_area), Box::new(factory_area)]);
+        layout.render(writer);
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {
-        (100, 50)
+        panic!("Never called");
     }
 
     fn handle(&mut self, e: &UserInput) -> UserEventHandled {

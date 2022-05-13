@@ -226,6 +226,10 @@ pub struct Game<const N: usize> {
 }
 
 impl<const N: usize> Game<N> {
+    pub fn get_players(&self) -> &[Player] {
+        &self.players
+    }
+
     pub fn find_first_tile_in_factory(&self, factory_id: usize) -> Tile {
         self.factories[factory_id].find_first_tile().unwrap() // TODO unwrap
     }
