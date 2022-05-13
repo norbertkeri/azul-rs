@@ -1,4 +1,4 @@
-use super::{floorline::FloorLine, Tile};
+use super::Tile;
 use crate::visor::{renderer::RootedRenderer, Component};
 
 #[derive(Debug, PartialEq)]

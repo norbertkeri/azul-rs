@@ -2,6 +2,7 @@ use crate::visor::layout::Layout;
 
 use crate::visor::{renderer, Component};
 
+use super::floorline::{FloorLine, FloorLineView};
 use super::wall::{Wall, WallView};
 use super::{
     patternline::{PatternLine, PatternLineView},
@@ -49,6 +50,7 @@ type InProgress = [PatternLine; 5];
 pub struct BuildingArea {
     in_progress: InProgress,
     wall: Wall,
+    floorline: FloorLine,
 }
 
 impl Default for BuildingArea {
@@ -57,6 +59,7 @@ impl Default for BuildingArea {
         Self {
             in_progress,
             wall: Default::default(),
+            floorline: Default::default(),
         }
     }
 }
@@ -92,6 +95,10 @@ impl BuildingArea {
             }
         }
     }
+
+    pub fn get_floorline(&self) -> &FloorLine {
+        &self.floorline
+    }
 }
 
 pub struct BuildingAreaView<'a> {
@@ -110,21 +117,27 @@ impl<'a> BuildingAreaView<'a> {
 
 impl<'a> Component for BuildingAreaView<'a> {
     fn render(&self, writer: &mut renderer::RootedRenderer) {
-        let panel = Layout::horizontal(
+        let panel = Layout::vertical(
             0,
             vec![
-                Box::new(InProgressView::new(
-                    self.selected,
-                    self.buildingarea.get_rows(),
+                Box::new(Layout::horizontal(
+                    0,
+                    vec![
+                        Box::new(InProgressView::new(
+                            self.selected,
+                            self.buildingarea.get_rows(),
+                        )),
+                        Box::new(WallView::new(&self.buildingarea.wall)),
+                    ],
                 )),
-                Box::new(WallView::new(&self.buildingarea.wall)),
+                Box::new(FloorLineView::new(self.buildingarea.get_floorline())),
             ],
         );
         panel.render(writer);
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {
-        (15, 5)
+        (15, 7)
     }
 }
 

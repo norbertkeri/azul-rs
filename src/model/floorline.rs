@@ -1,3 +1,7 @@
+use std::borrow::Cow;
+
+use crate::visor::Component;
+
 use super::Tile;
 
 #[derive(Default)]
@@ -6,14 +10,16 @@ pub struct FloorLine([Option<Tile>; 7]);
 impl FloorLine {
     pub fn calculate_minus_points(&self) -> u8 {
         self.0.iter().enumerate().fold(0, |acc, (i, tile)| {
-            acc + tile
-                .map(|_| match i {
-                    0..=1 => 1,
-                    2..=4 => 2,
-                    _ => 3,
-                })
-                .unwrap_or(0)
+            acc + tile.map(|_| Self::points_for_slot(i)).unwrap_or(0)
         })
+    }
+
+    fn points_for_slot(slot_id: usize) -> u8 {
+        match slot_id {
+            0..=1 => 1,
+            2..=4 => 2,
+            _ => 3,
+        }
     }
 
     pub fn add_tiles(&mut self, tiles: &[Tile]) -> Vec<Tile> {
@@ -31,6 +37,37 @@ impl FloorLine {
         }
 
         remaining
+    }
+}
+
+pub struct FloorLineView<'a> {
+    floorline: &'a FloorLine,
+}
+
+impl<'a> FloorLineView<'a> {
+    pub fn new(floorline: &'a FloorLine) -> Self {
+        Self { floorline }
+    }
+}
+
+impl<'a> Component for FloorLineView<'a> {
+    fn render(&self, writer: &mut crate::visor::renderer::RootedRenderer) {
+        for (i, _slot) in self.floorline.0.iter().enumerate() {
+            writer.write(&FloorLine::points_for_slot(i).to_string());
+        }
+        writer.reset_cursor_to_root();
+        writer.write("\n");
+        for slot in self.floorline.0.iter() {
+            let s = match slot {
+                Some(tile) => Cow::from(tile.to_string()),
+                None => Cow::from("☐"),
+            };
+            writer.write(&s);
+        }
+    }
+
+    fn declare_dimensions(&self) -> (u16, u16) {
+        (7, 2)
     }
 }
 

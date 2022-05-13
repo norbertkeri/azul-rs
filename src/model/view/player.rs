@@ -27,7 +27,7 @@ impl<'a> Component for PlayerView<'a> {
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {
-        (20, 5)
+        (20, 7)
     }
 }
 
@@ -109,6 +109,6 @@ impl<'a> Component for PlayerAreaView<'a> {
 
     fn declare_dimensions(&self) -> (u16, u16) {
         let length = 23 * self.players.len() as u16;
-        (length, 10)
+        (length, 12)
     }
 }
