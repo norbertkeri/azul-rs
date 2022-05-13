@@ -1,4 +1,4 @@
-use super::{Coords, backend::TerminalBackend};
+use super::{backend::TerminalBackend, Coords};
 
 trait Renderer {
     fn write(&mut self, s: &str);
@@ -21,10 +21,7 @@ impl<'a> RootedRenderer<'a> {
     }
 
     pub fn new(writer: &'a mut dyn TerminalBackend, root: Coords) -> Self {
-        Self {
-            writer,
-            root,
-        }
+        Self { writer, root }
     }
 
     pub fn write(&mut self, s: &str) {

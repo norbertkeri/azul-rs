@@ -1,8 +1,11 @@
 use std::usize;
 
-use crate::visor::{Component, renderer};
+use crate::visor::{renderer, Component};
 
-use super::{patternline::{PatternLine, PatternLineView}, Tile};
+use super::{
+    patternline::{PatternLine, PatternLineView},
+    Tile,
+};
 
 pub struct Player {
     name: String,
@@ -53,10 +56,16 @@ impl BuildingArea {
         &self.0
     }
 
-    pub fn get_rows_that_can_accept(&self, tile: Tile, how_many: usize) -> Vec<(usize, &PatternLine)> {
-        self.0.iter().enumerate().filter(move |(_i, p)| {
-            p.can_accept(tile, how_many)
-        }).collect()
+    pub fn get_rows_that_can_accept(
+        &self,
+        tile: Tile,
+        how_many: usize,
+    ) -> Vec<(usize, &PatternLine)> {
+        self.0
+            .iter()
+            .enumerate()
+            .filter(move |(_i, p)| p.can_accept(tile, how_many))
+            .collect()
     }
 }
 
@@ -68,12 +77,15 @@ impl Default for BuildingArea {
 
 pub struct BuildingAreaView<'a> {
     buildingarea: &'a BuildingArea,
-    selected: Option<usize>
+    selected: Option<usize>,
 }
 
 impl<'a> BuildingAreaView<'a> {
     pub fn new(buildingarea: &'a BuildingArea, selected: Option<usize>) -> Self {
-        Self { buildingarea, selected }
+        Self {
+            buildingarea,
+            selected,
+        }
     }
 }
 

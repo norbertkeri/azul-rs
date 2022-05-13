@@ -151,12 +151,12 @@ impl<'a, const N: usize> From<&'a Game<N>> for FactoryAreaView<'a> {
                 factory_id,
                 tile: selected_tile,
             },
-            GameState::PickRowToPutTiles { player_id: _, factory_id, tile, selected_row_id: _ } => {
-                FactoryAreaState::SelectTile {
-                    factory_id,
-                    tile
-                }
-            }
+            GameState::PickRowToPutTiles {
+                player_id: _,
+                factory_id,
+                tile,
+                selected_row_id: _,
+            } => FactoryAreaState::SelectTile { factory_id, tile },
         };
         let factories = game.get_factories();
         Self {
@@ -260,12 +260,26 @@ impl<const N: usize> Component for GameView<N> {
                         tile,
                     })
                 }
-                GameState::PickTileFromFactory { player_id, factory_id, selected_tile } => {
-                    UserEventHandled::AppEvent(AppEvent::TransitionToPickRow { player_id, tile: selected_tile, factory_id })
-                },
-                GameState::PickRowToPutTiles { player_id, factory_id, tile, selected_row_id } => {
-                    UserEventHandled::AppEvent(AppEvent::PlaceTiles { player_id, factory_id, tile, row_id: selected_row_id })
-                }
+                GameState::PickTileFromFactory {
+                    player_id,
+                    factory_id,
+                    selected_tile,
+                } => UserEventHandled::AppEvent(AppEvent::TransitionToPickRow {
+                    player_id,
+                    tile: selected_tile,
+                    factory_id,
+                }),
+                GameState::PickRowToPutTiles {
+                    player_id,
+                    factory_id,
+                    tile,
+                    selected_row_id,
+                } => UserEventHandled::AppEvent(AppEvent::PlaceTiles {
+                    player_id,
+                    factory_id,
+                    tile,
+                    row_id: selected_row_id,
+                }),
             },
             UserInput::Back => UserEventHandled::Noop,
         }

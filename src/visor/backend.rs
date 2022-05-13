@@ -1,5 +1,5 @@
-use std::io::Write;
 use super::Coords;
+use std::io::Write;
 
 pub struct TestBackend {
     cursor: Coords,

@@ -1,7 +1,6 @@
-struct InMemoryRenderer {
-}
+struct InMemoryRenderer {}
 
 struct RenderResult {
     output: String,
-    size: (u16, u16)
+    size: (u16, u16),
 }

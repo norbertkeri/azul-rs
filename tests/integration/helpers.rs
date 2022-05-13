@@ -1,4 +1,4 @@
-use azulrs::visor::{view::TextView, Component, Engine, backend::TestBackend};
+use azulrs::visor::{backend::TestBackend, view::TextView, Component, Engine};
 
 pub fn to_textviews<const N: usize>(data: [&str; N]) -> Vec<Box<dyn Component>> {
     data.iter()

@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 
+pub mod backend;
+pub mod inmemory;
 pub mod layout;
 pub mod renderer;
 pub mod view;
-pub mod inmemory;
-pub mod backend;
 
-use self::backend::{TerminalBackend, DebuggableTerminalBackend};
+use self::backend::{DebuggableTerminalBackend, TerminalBackend};
 use self::renderer::RootedRenderer;
 use crate::model::AppEvent;
 use std::fmt::Debug;

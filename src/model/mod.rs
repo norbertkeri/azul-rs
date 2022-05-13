@@ -4,7 +4,6 @@ use crate::model::player::Player;
 use rand::{distributions::Standard, prelude::Distribution};
 use std::{
     fmt::{Debug, Display},
-    rc::Rc,
     str::FromStr,
 };
 
@@ -18,9 +17,21 @@ pub mod view;
 pub enum AppEvent {
     SelectNext,
     SelectPrev,
-    TransitionToPickTileFromFactory { factory_id: usize, tile: Tile },
-    TransitionToPickRow { player_id: usize, factory_id: usize, tile: Tile },
-    PlaceTiles { player_id: usize, factory_id: usize, tile: Tile, row_id: usize }
+    TransitionToPickTileFromFactory {
+        factory_id: usize,
+        tile: Tile,
+    },
+    TransitionToPickRow {
+        player_id: usize,
+        factory_id: usize,
+        tile: Tile,
+    },
+    PlaceTiles {
+        player_id: usize,
+        factory_id: usize,
+        tile: Tile,
+        row_id: usize,
+    },
 }
 
 pub enum Slot {
@@ -240,14 +251,14 @@ impl Factory {
 
 pub enum Direction {
     Next,
-    Prev
+    Prev,
 }
 
 pub struct Game<const N: usize> {
     players: [Player; N],
     factories: [Factory; 4],
     state: GameState,
-    common_area: CommonArea
+    common_area: CommonArea,
 }
 
 impl<const N: usize> Game<N> {
@@ -276,7 +287,7 @@ impl<const N: usize> Game<N> {
                 player_id: 0,
                 current_factory: 0,
             },
-            common_area: CommonArea::default()
+            common_area: CommonArea::default(),
         }
     }
 
@@ -288,7 +299,14 @@ impl<const N: usize> Game<N> {
         [0, 1, 2, 3].map(|_| Factory::new_random())
     }
 
-    fn find_adjacent_selectable_row(&self, tile: Tile, how_many: usize, player_id: usize, current_row: usize, direction: Direction) -> Option<usize> {
+    fn find_adjacent_selectable_row(
+        &self,
+        tile: Tile,
+        how_many: usize,
+        player_id: usize,
+        current_row: usize,
+        direction: Direction,
+    ) -> Option<usize> {
         let barea = self.get_players()[player_id].get_buildingarea();
         let rows = barea.get_rows_that_can_accept(tile, how_many);
         let current_row_index = rows
@@ -300,19 +318,17 @@ impl<const N: usize> Game<N> {
             (count, Direction::Next) if count - 1 == current_row_index => {
                 let (first_index, _) = rows.first().unwrap();
                 Some(*first_index)
-            },
+            }
             (_, Direction::Prev) if current_row_index == 0 => {
                 let (last_index, _) = rows.last().unwrap();
                 Some(*last_index)
-            },
-            (_, Direction::Next) => {
-                rows.get(current_row_index + 1)
-                .map(|(next_index, _)| *next_index)
             }
-            (_, Direction::Prev) => {
-                rows.get(current_row_index - 1)
-                .map(|(prev_index, _)| *prev_index)
-            }
+            (_, Direction::Next) => rows
+                .get(current_row_index + 1)
+                .map(|(next_index, _)| *next_index),
+            (_, Direction::Prev) => rows
+                .get(current_row_index - 1)
+                .map(|(prev_index, _)| *prev_index),
         }
     }
 
@@ -338,12 +354,28 @@ impl<const N: usize> Game<N> {
                         selected_tile: next_tile,
                     }
                 }
-                GameState::PickRowToPutTiles { player_id, factory_id, tile, selected_row_id } => {
+                GameState::PickRowToPutTiles {
+                    player_id,
+                    factory_id,
+                    tile,
+                    selected_row_id,
+                } => {
                     let factory = &self.get_factories()[factory_id];
                     let count = factory.count_tile(tile);
-                    let selected_row_id = self.find_adjacent_selectable_row(tile, count, player_id, selected_row_id, Direction::Next).unwrap_or(selected_row_id);
+                    let selected_row_id = self
+                        .find_adjacent_selectable_row(
+                            tile,
+                            count,
+                            player_id,
+                            selected_row_id,
+                            Direction::Next,
+                        )
+                        .unwrap_or(selected_row_id);
                     GameState::PickRowToPutTiles {
-                        factory_id, player_id, tile, selected_row_id
+                        factory_id,
+                        player_id,
+                        tile,
+                        selected_row_id,
                     }
                 }
             },
@@ -367,12 +399,28 @@ impl<const N: usize> Game<N> {
                         selected_tile: next_tile,
                     }
                 }
-                GameState::PickRowToPutTiles { player_id, factory_id, tile, selected_row_id } => {
+                GameState::PickRowToPutTiles {
+                    player_id,
+                    factory_id,
+                    tile,
+                    selected_row_id,
+                } => {
                     let factory = &self.get_factories()[factory_id];
                     let count = factory.count_tile(tile);
-                    let selected_row_id = self.find_adjacent_selectable_row(tile, count, player_id, selected_row_id, Direction::Prev).unwrap_or(selected_row_id);
+                    let selected_row_id = self
+                        .find_adjacent_selectable_row(
+                            tile,
+                            count,
+                            player_id,
+                            selected_row_id,
+                            Direction::Prev,
+                        )
+                        .unwrap_or(selected_row_id);
                     GameState::PickRowToPutTiles {
-                        factory_id, player_id, tile, selected_row_id
+                        factory_id,
+                        player_id,
+                        tile,
+                        selected_row_id,
                     }
                 }
             },
@@ -395,9 +443,18 @@ impl<const N: usize> Game<N> {
                 } => {
                     panic!("Cannot happen");
                 }
-                GameState::PickRowToPutTiles { player_id, factory_id, tile, selected_row_id } => panic!("Cannot happen")
+                GameState::PickRowToPutTiles {
+                    player_id: _,
+                    factory_id: _,
+                    tile: _,
+                    selected_row_id: _,
+                } => panic!("Cannot happen"),
             },
-            AppEvent::TransitionToPickRow { player_id, factory_id, tile } => {
+            AppEvent::TransitionToPickRow {
+                player_id,
+                factory_id,
+                tile,
+            } => {
                 let factory = &self.get_factories()[factory_id];
                 let how_many = factory.count_tile(tile);
                 let buildingarea = self.get_players()[player_id].get_buildingarea();
@@ -409,17 +466,22 @@ impl<const N: usize> Game<N> {
                     player_id,
                     factory_id,
                     tile,
-                    selected_row_id
+                    selected_row_id,
                 }
             }
-            AppEvent::PlaceTiles { player_id, factory_id, tile, row_id } => {
+            AppEvent::PlaceTiles {
+                player_id,
+                factory_id,
+                tile,
+                row_id,
+            } => {
                 let factory = &mut self.factories[factory_id];
                 let buildingarea = self.players[player_id].get_buildingarea_mut();
                 let row = buildingarea.get_row_mut(row_id);
                 factory.pick(tile, &mut self.common_area, row).unwrap();
                 GameState::PickFactory {
                     player_id: 1 - player_id,
-                    current_factory: 0
+                    current_factory: 0,
                 }
             }
         };
@@ -442,8 +504,8 @@ pub enum GameState {
         player_id: usize,
         factory_id: usize,
         tile: Tile,
-        selected_row_id: usize
-    }
+        selected_row_id: usize,
+    },
 }
 
 #[cfg(test)]

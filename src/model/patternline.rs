@@ -1,4 +1,4 @@
-use crate::visor::{Component, renderer::RootedRenderer};
+use crate::visor::{renderer::RootedRenderer, Component};
 
 use super::{bag::Bag, Pickable, Tile};
 
@@ -100,7 +100,7 @@ impl FloorLine {
 #[derive(Debug)]
 pub struct PatternLineView<'a> {
     line: &'a PatternLine,
-    selected: bool
+    selected: bool,
 }
 
 impl<'a> PatternLineView<'a> {

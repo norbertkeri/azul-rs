@@ -1,7 +1,9 @@
 use azulrs::visor::{
+    backend::TestBackend,
+    layout::Layout,
     renderer::RootedRenderer,
     view::{PanelBuilder, TextView},
-    Component, Coords, layout::Layout, backend::TestBackend,
+    Component, Coords,
 };
 
 #[test]
@@ -28,12 +30,14 @@ fn test_drawn_area() {
 #[test]
 #[ignore]
 fn test_drawn_area2() {
-    let hellos = ["Hello", "World"].map(TextView::from)
-        .map(|tview| Box::new(PanelBuilder::default()
-            .component(Box::new(tview) as Box<_>)
-            .build()
-            .unwrap()) as Box<_>
-        );
+    let hellos = ["Hello", "World"].map(TextView::from).map(|tview| {
+        Box::new(
+            PanelBuilder::default()
+                .component(Box::new(tview) as Box<_>)
+                .build()
+                .unwrap(),
+        ) as Box<_>
+    });
 
     /*
     ┌─────┐
@@ -55,12 +59,14 @@ fn test_drawn_area2() {
 #[test]
 #[ignore]
 fn test_drawn_area3() {
-    let hellos = ["Hello", "World"].map(TextView::from)
-        .map(|tview| Box::new(PanelBuilder::default()
-            .component(Box::new(tview) as Box<_>)
-            .build()
-            .unwrap()) as Box<_>
-        );
+    let hellos = ["Hello", "World"].map(TextView::from).map(|tview| {
+        Box::new(
+            PanelBuilder::default()
+                .component(Box::new(tview) as Box<_>)
+                .build()
+                .unwrap(),
+        ) as Box<_>
+    });
 
     /*
     ┌─────┐ ┌─────┐
