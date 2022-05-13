@@ -1,4 +1,4 @@
-use furnace::visor::{
+use azulrs::visor::{
     renderer::RootedRenderer,
     view::{PanelBuilder, TextView},
     Component, Coords, layout::Layout, backend::TestBackend,

@@ -1,4 +1,4 @@
-use furnace::visor::{view::TextView, Component, Engine, backend::TestBackend};
+use azulrs::visor::{view::TextView, Component, Engine, backend::TestBackend};
 
 pub fn to_textviews<const N: usize>(data: [&str; N]) -> Vec<Box<dyn Component>> {
     data.iter()

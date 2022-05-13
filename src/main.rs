@@ -6,13 +6,13 @@ use std::{
     rc::Rc,
 };
 
-use furnace::model::player::Player;
-use furnace::model::view::{FactoryView, GameView};
-use furnace::model::{Factory, Game, Tile};
-use furnace::visor::backend::TermionBackend;
-use furnace::visor::layout::Layout;
-use furnace::visor::view::{Panel, PanelBuilder, TextView};
-use furnace::visor::{Component, Engine, UserInput};
+use azulrs::model::player::Player;
+use azulrs::model::view::{FactoryView, GameView};
+use azulrs::model::{Factory, Game, Tile};
+use azulrs::visor::backend::TermionBackend;
+use azulrs::visor::layout::Layout;
+use azulrs::visor::view::{Panel, PanelBuilder, TextView};
+use azulrs::visor::{Component, Engine, UserInput};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 

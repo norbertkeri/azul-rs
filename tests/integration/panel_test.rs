@@ -1,4 +1,4 @@
-use furnace::visor::{
+use azulrs::visor::{
     layout::Layout,
     view::{PanelBuilder, TextView},
 };

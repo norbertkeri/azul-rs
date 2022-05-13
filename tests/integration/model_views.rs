@@ -1,7 +1,7 @@
-use furnace::model::patternline::PatternLine;
+use azulrs::model::patternline::PatternLine;
 use test_case::test_case;
 
-use furnace::model::{
+use azulrs::model::{
     view::{FactoryView, TileView},
     Factory, Tile,
 };
@@ -48,8 +48,8 @@ fn test_factoryview_selected() {
 #[test_case("   ☐☐", PatternLine::new_free(2); "can render a free patternline")]
 fn test_patternline_rendering(
     expected: &str,
-    patternline: furnace::model::patternline::PatternLine,
+    patternline: azulrs::model::patternline::PatternLine,
 ) {
-    let view = furnace::model::patternline::PatternLineView::new(&patternline);
+    let view = azulrs::model::patternline::PatternLineView::new(&patternline);
     expect_component(view, expected);
 }

@@ -1,4 +1,4 @@
-use furnace::visor::{layout::Layout, view::TextView};
+use azulrs::visor::{layout::Layout, view::TextView};
 use helpers::{expect_component, to_textviews};
 
 mod factory_test;
