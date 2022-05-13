@@ -1,6 +1,6 @@
 use crate::visor::{renderer::RootedRenderer, Component};
 
-use super::{bag::Bag, Pickable, Tile};
+use super::{bag::Bag, Tile};
 
 #[derive(Debug, PartialEq)]
 pub enum PatternLine {
@@ -89,7 +89,7 @@ impl PatternLine {
     }
 }
 
-pub struct FloorLine([Pickable; 6]);
+pub struct FloorLine([Tile; 6]);
 
 impl FloorLine {
     pub fn reset(&mut self, _bag: &mut Bag) -> u8 {

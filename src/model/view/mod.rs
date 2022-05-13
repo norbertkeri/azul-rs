@@ -81,35 +81,43 @@ impl<'a> From<FactoryView<'a>> for Box<dyn Component + 'a> {
     }
 }
 
+pub fn render_pickables(is_selected: bool, tiles: &[Tile], selected_tiles: &[Tile]) -> String {
+    let mut output = String::new();
+    let mut iter = tiles.iter().peekable();
+    if is_selected {
+        output += "--> ";
+    }
+    let mut began_selection = false;
+    while let Some(t) = iter.next() {
+        if !began_selection && selected_tiles.contains(t) {
+            output += "|";
+            began_selection = true;
+        }
+        output += &t.to_string();
+        if began_selection {
+            let render_closing = match iter.peek() {
+                Some(next_tile) if !selected_tiles.contains(*next_tile) => true,
+                None => true,
+                _ => false,
+            };
+            if render_closing {
+                output += "|";
+                began_selection = false;
+            }
+        }
+    }
+    return output;
+}
+
 impl Component for FactoryView<'_> {
     fn render(&self, writer: &mut RootedRenderer) {
-        let mut began_selection = false;
         if let Some(tiles) = self.factory.get_tiles() {
-            let mut iter = tiles.iter().peekable();
-            if self.is_selected {
-                writer.write("--> ");
-            }
-            while let Some(t) = iter.next() {
-                if !began_selection
-                    && matches!(self.selected_tile, Some(selected_tile) if &selected_tile == t)
-                {
-                    writer.write("|");
-                    began_selection = true;
-                }
-                TileView::new(*t, false).render(writer);
-                if began_selection {
-                    let selected_tile = self.selected_tile.unwrap();
-                    let render_closing = match iter.peek() {
-                        Some(next_tile) if *next_tile != &selected_tile => true,
-                        None => true,
-                        _ => false,
-                    };
-                    if render_closing {
-                        writer.write("|");
-                        began_selection = false;
-                    }
-                }
-            }
+            let selected_tiles = self
+                .selected_tile
+                .map(|t| vec![t])
+                .unwrap_or_default()
+                .into_boxed_slice();
+            writer.write(&render_pickables(self.is_selected, tiles, &selected_tiles));
         }
         writer.write("\n");
     }
@@ -216,7 +224,7 @@ impl<const N: usize> Component for GameView<N> {
         let game: &Game<N> = &self.game.as_ref().borrow();
         let player_area: PlayerAreaView = game.into();
         let factory_area: FactoryAreaView = game.into();
-        let common_area = CommonAreaView::new(&game.common_area, None);
+        let common_area: CommonAreaView = game.into();
 
         let gameview = PanelBuilder::default()
             .component(Box::new(Layout::vertical(
@@ -263,7 +271,10 @@ impl<const N: usize> Component for GameView<N> {
                     player_id: _,
                     current_source,
                 } => {
-                    let tile = self.game.borrow().find_first_tile_in_source(current_source);
+                    let source = self.game.borrow().find_source(current_source);
+                    let tile = source
+                        .find_first_tile()
+                        .expect("You managed to pick a source that has no tiles?");
 
                     UserEventHandled::AppEvent(AppEvent::TransitionToPickTileFromFactory {
                         source: current_source,

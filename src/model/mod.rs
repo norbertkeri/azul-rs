@@ -12,10 +12,13 @@ use std::{
 
 use self::bag::Bag;
 use self::patternline::PatternLine;
+use self::tilecollection::{HasTileCollection, TileCollection};
+use self::view::render_pickables;
 
 pub mod bag;
 pub mod patternline;
 pub mod player;
+pub mod tilecollection;
 pub mod view;
 
 pub enum AppEvent {
@@ -102,6 +105,7 @@ where
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tile {
+    FirstPlayer,
     Blue,
     Green,
     Red,
@@ -136,6 +140,7 @@ impl Display for Tile {
             Tile::Blue => "B",
             Tile::Green => "G",
             Tile::White => "W",
+            Tile::FirstPlayer => "1",
         };
         write!(f, "{}", s)
     }
@@ -154,46 +159,34 @@ impl FromStr for Tile {
             'B' => Ok(Tile::Blue),
             'G' => Ok(Tile::Green),
             'W' => Ok(Tile::White),
+            '1' => Ok(Tile::FirstPlayer),
             c => Err(format!("Invalid tile character: {}", c)),
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Pickable {
-    FirstPlayerToken,
-    Tile(Tile),
-}
+pub struct CommonArea(Vec<Tile>);
 
-impl ToString for Pickable {
-    fn to_string(&self) -> String {
-        match self {
-            Pickable::FirstPlayerToken => String::from("1"),
-            Pickable::Tile(t) => t.to_string(),
-        }
+impl HasTileCollection for CommonArea {
+    fn get_tilecollection(&self) -> Box<dyn TileCollection> {
+        Box::new(self.0.clone())
     }
 }
 
-pub struct CommonArea(Vec<Pickable>);
-
 impl Default for CommonArea {
     fn default() -> Self {
-        Self::new(Default::default())
+        let initial = vec![Tile::FirstPlayer];
+        Self(initial)
     }
 }
 
 impl CommonArea {
-    pub fn inspect(&self) -> &[Pickable] {
+    pub fn inspect(&self) -> &[Tile] {
         &self.0
-    }
-    pub fn new(mut pickables: Vec<Pickable>) -> Self {
-        let mut initial = vec![Pickable::FirstPlayerToken];
-        initial.append(&mut pickables);
-        Self(initial)
     }
 
     pub fn add(&mut self, tiles: &[Tile]) {
-        let mut tiles = tiles.iter().copied().map(Pickable::Tile).collect();
+        let mut tiles = tiles.iter().copied().collect();
         self.0.append(&mut tiles);
         self.0.sort();
     }
@@ -203,28 +196,53 @@ impl CommonArea {
     }
 }
 
+enum CommonAreaStateView {
+    Selected,
+    SelectedWithTile(Tile),
+    Passive,
+}
+
 struct CommonAreaView<'a> {
     common_area: &'a CommonArea,
-    selected: Option<Pickable>,
+    state: CommonAreaStateView,
 }
 
 impl<'a> CommonAreaView<'a> {
-    fn new(common_area: &'a CommonArea, selected: Option<Pickable>) -> Self {
-        Self {
-            common_area,
-            selected,
-        }
+    fn new(common_area: &'a CommonArea, state: CommonAreaStateView) -> Self {
+        Self { common_area, state }
+    }
+}
+
+impl<'a, const N: usize> From<&'a Game<N>> for CommonAreaView<'a> {
+    fn from(game: &'a Game<N>) -> Self {
+        let state = match game.state {
+            GameState::PickSource { current_source, .. } => match current_source {
+                TileSource::Factory(_) => CommonAreaStateView::Passive,
+                TileSource::CommonArea => CommonAreaStateView::Selected,
+            },
+            GameState::PickRowToPutTiles { source, tile, .. }
+            | GameState::PickTileFromSource {
+                current_source: source,
+                selected_tile: tile,
+                ..
+            } => match source {
+                TileSource::Factory(_) => CommonAreaStateView::Passive,
+                TileSource::CommonArea => CommonAreaStateView::SelectedWithTile(tile),
+            },
+        };
+        Self::new(&game.common_area, state)
     }
 }
 
 impl<'a> Component for CommonAreaView<'a> {
     fn render(&self, writer: &mut crate::visor::renderer::RootedRenderer) {
-        let output: String = self
-            .common_area
-            .inspect()
-            .iter()
-            .map(|t| t.to_string())
-            .collect();
+        let (is_selected, selected_tiles) = match self.state {
+            CommonAreaStateView::Selected => (true, vec![]),
+            CommonAreaStateView::SelectedWithTile(tile) => (true, vec![tile, Tile::FirstPlayer]),
+            CommonAreaStateView::Passive => (false, vec![]),
+        };
+
+        let output = render_pickables(is_selected, &self.common_area.0, &selected_tiles);
 
         let panel = PanelBuilder::default()
             .name("Common area")
@@ -247,6 +265,15 @@ impl<'a> Component for CommonAreaView<'a> {
 pub const TILE_PER_FACTORY: usize = 4;
 pub struct Factory(Option<[Tile; TILE_PER_FACTORY]>);
 
+impl HasTileCollection for Factory {
+    fn get_tilecollection(&self) -> Box<dyn TileCollection> {
+        match self.0 {
+            Some(tiles) => Box::new(tiles) as Box<_>,
+            None => Box::new(vec![]) as Box<_>,
+        }
+    }
+}
+
 impl Factory {
     pub fn new(mut tiles: [Tile; TILE_PER_FACTORY]) -> Self {
         tiles.sort();
@@ -267,38 +294,6 @@ impl Factory {
         self.0.is_none()
     }
 
-    fn distinct_tiles(&self) -> Vec<Tile> {
-        if let Some(tiles) = self.0 {
-            let mut result: Vec<Tile> = Vec::with_capacity(4);
-            for t in tiles.iter() {
-                if !result.contains(t) {
-                    result.push(*t);
-                }
-            }
-            return result;
-        }
-        vec![]
-    }
-
-    pub fn find_adjacent_tile(&self, tile: Tile, direction: Direction) -> Tile {
-        let distinct_tiles = self.distinct_tiles();
-        if distinct_tiles.len() == 1 {
-            return tile;
-        }
-        let i = distinct_tiles
-            .iter()
-            .position(|maybe_t| maybe_t == &tile)
-            .expect("This tile is not in the factory?");
-        match (i, direction) {
-            (0, Direction::Prev) => *distinct_tiles.last().unwrap(),
-            (i, Direction::Next) if i == distinct_tiles.len() - 1 => {
-                *distinct_tiles.first().unwrap()
-            }
-            (i, Direction::Prev) => distinct_tiles[i - 1],
-            (i, Direction::Next) => distinct_tiles[i + 1],
-        }
-    }
-
     pub fn find_first_tile(&self) -> Option<Tile> {
         self.0.map(|tiles| tiles[0])
     }
@@ -309,13 +304,6 @@ impl Factory {
 
     pub fn get_tiles(&self) -> Option<&[Tile]> {
         self.0.as_ref().map(|t| t.as_slice())
-    }
-
-    pub fn count_tile(&self, tile: Tile) -> usize {
-        match self.get_tiles() {
-            Some(tiles) => tiles.iter().filter(|&&t| t == tile).count(),
-            None => 0,
-        }
     }
 
     pub fn pick(
@@ -419,15 +407,6 @@ impl<const N: usize> Game<N> {
         sources
     }
 
-    pub fn find_first_tile_in_source(&self, source: TileSource) -> Tile {
-        match source {
-            TileSource::Factory(factory_id) => {
-                self.factories[factory_id].find_first_tile().unwrap()
-            } // TODO unwrap
-            TileSource::CommonArea => todo!("Implement commonarea next"),
-        }
-    }
-
     pub fn for_players(players: [Player; N]) -> Self {
         let mut bag = Bag::default();
         let factories: Vec<_> = [0, 1, 2, 3]
@@ -454,7 +433,7 @@ impl<const N: usize> Game<N> {
     pub fn count_tiles_in(&self, source: TileSource, tile: Tile) -> usize {
         match source {
             TileSource::Factory(factory_id) => self.factories[factory_id].count_tile(tile),
-            TileSource::CommonArea => todo!("Implement tile counting in commonarea"),
+            TileSource::CommonArea => self.common_area.count_tile(tile),
         }
     }
 
@@ -496,7 +475,9 @@ impl<const N: usize> Game<N> {
                         TileSource::Factory(factory_id) => {
                             self.factories[factory_id].find_adjacent_tile(selected_tile, dir)
                         }
-                        TileSource::CommonArea => todo!(),
+                        TileSource::CommonArea => {
+                            self.common_area.find_adjacent_tile(selected_tile, dir)
+                        }
                     };
                     GameState::PickTileFromSource {
                         player_id,
@@ -506,18 +487,17 @@ impl<const N: usize> Game<N> {
                 }
                 GameState::PickRowToPutTiles {
                     player_id,
-                    source: factory_id,
+                    source,
                     tile,
                     selected_row_id,
                 } => {
-                    let factory: Factory = todo!();
+                    let count = self.find_source(source).count_tile(tile);
                     //let factory = &self.get_factories()[factory_id];
-                    let count = factory.count_tile(tile);
                     let selected_row_id = self
                         .find_adjacent_selectable_row(tile, count, player_id, selected_row_id, dir)
                         .unwrap_or(selected_row_id);
                     GameState::PickRowToPutTiles {
-                        source: factory_id,
+                        source,
                         player_id,
                         tile,
                         selected_row_id,
@@ -594,6 +574,13 @@ impl<const N: usize> Game<N> {
             TileSource::CommonArea => todo!(),
         }
     }
+
+    pub fn find_source(&self, source: TileSource) -> Box<dyn TileCollection> {
+        match source {
+            TileSource::Factory(factory_id) => self.factories[factory_id].get_tilecollection(),
+            TileSource::CommonArea => self.common_area.get_tilecollection(),
+        }
+    }
 }
 
 pub enum GameState {
@@ -614,9 +601,19 @@ pub enum GameState {
     },
 }
 
+impl GameState {
+    pub fn find_selected_tile(&self) -> Option<Tile> {
+        match self {
+            GameState::PickSource { .. } => None,
+            GameState::PickTileFromSource { selected_tile, .. } => Some(*selected_tile),
+            GameState::PickRowToPutTiles { tile, .. } => Some(*tile),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::model::{Factory, Tile};
+    use crate::model::{tilecollection::TileCollection, Factory, Tile};
 
     #[test]
     fn test_count_tile() {
