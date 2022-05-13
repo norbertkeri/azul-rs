@@ -263,7 +263,7 @@ impl<'a> Component for CommonAreaView<'a> {
     }
 
     fn declare_dimensions(&self) -> (u16, u16) {
-        (12, 1)
+        (12, 3)
     }
 
     fn handle(&mut self, _event: &crate::visor::UserInput) -> crate::visor::UserEventHandled {

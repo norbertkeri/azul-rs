@@ -1,5 +1,6 @@
 use self::player::PlayerAreaView;
 
+use super::buildingarea::ScoreView;
 use super::{AppEvent, CommonAreaView, Direction, Factory, FactoryId, Game, Tile};
 use crate::visor::renderer::RootedRenderer;
 use crate::visor::view::PanelBuilder;
@@ -225,6 +226,7 @@ impl<const N: usize> Component for GameView<N> {
         let player_area: PlayerAreaView = game.into();
         let factory_area: FactoryAreaView = game.into();
         let common_area: CommonAreaView = game.into();
+        let score_view = ScoreView::new(game.get_players());
 
         let gameview = PanelBuilder::default()
             .component(Box::new(Layout::vertical(
@@ -233,7 +235,10 @@ impl<const N: usize> Component for GameView<N> {
                     Box::new(player_area),
                     Box::new(Layout::horizontal(
                         1,
-                        vec![Box::new(factory_area), Box::new(common_area)],
+                        vec![Box::new(factory_area), Box::new(Layout::vertical(1, vec![Box::new(common_area),
+                        Box::new(score_view)]))
+
+                        ],
                     )),
                 ],
             )))

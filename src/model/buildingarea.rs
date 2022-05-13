@@ -1,7 +1,8 @@
 use crate::visor::{
     layout::Layout,
     renderer::{self, RootedRenderer},
-    Component,
+    Component, view::Panel,
+    view::{PanelBuilder, TextView},
 };
 
 use self::{
@@ -10,7 +11,7 @@ use self::{
     wall::{Wall, WallView},
 };
 
-use super::{CommonArea, Factory, Tile};
+use super::{CommonArea, Factory, Tile, player::Player};
 
 pub mod floorline;
 pub mod patternline;
@@ -203,5 +204,37 @@ impl<'a> Component for InProgressView<'a> {
 
     fn declare_dimensions(&self) -> (u16, u16) {
         (10, 5)
+    }
+}
+
+pub struct ScoreView<'a> {
+    players: &'a [Player]
+}
+
+impl<'a> ScoreView<'a> {
+    pub fn new(players: &'a [Player]) -> Self { Self { players } }
+}
+
+impl<'a> Component for ScoreView<'a> {
+    fn render(&self, writer: &mut RootedRenderer) {
+        let mut text = String::new();
+        for p in self.players {
+            let bg = p.get_buildingarea();
+            let wall = &bg.wall;
+            text.push_str(&format!("{}: {}\n", p.get_name(), wall.count_points()));
+        }
+        let textarea = TextView::from(text);
+
+        let panel = PanelBuilder::default()
+            .component(Box::new(textarea) as Box<_>)
+            .name("Score")
+            .build()
+            .unwrap();
+
+        panel.render(writer);
+    }
+
+    fn declare_dimensions(&self) -> (u16, u16) {
+        (10, self.players.len().try_into().unwrap())
     }
 }
