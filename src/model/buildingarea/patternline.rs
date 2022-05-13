@@ -29,7 +29,7 @@ impl PatternLine {
         }
     }
 
-    pub fn can_accept(&self, what: Tile) -> bool {
+    pub(super) fn can_accept(&self, what: Tile) -> bool {
         match self {
             PatternLine::Free { .. } => true,
             PatternLine::Taken { tile, .. } if tile != &what => false,
@@ -41,7 +41,7 @@ impl PatternLine {
         }
     }
 
-    pub fn accept(&mut self, what: Tile, how_many: usize) -> Result<usize, String> {
+    pub(super) fn accept(&mut self, what: Tile, how_many: usize) -> Result<usize, String> {
         match *self {
             PatternLine::Free { length } => {
                 let can_take = std::cmp::min(length, how_many);

@@ -1,13 +1,14 @@
 use crate::util::eq_lists;
-use azulrs::model::{buildingarea::patternline::PatternLine, CommonArea, Factory, Tile};
+use azulrs::model::{buildingarea::BuildingArea, CommonArea, Factory, Tile};
 
 #[test]
 fn test_picking_tiles_from_factory() {
+    let mut bg = BuildingArea::default();
+
     let mut factory = Factory::new([Tile::Yellow, Tile::Yellow, Tile::Green, Tile::Red]);
-    let mut patternline = PatternLine::new_free(4);
     let mut common = CommonArea::default();
-    factory
-        .pick(Tile::Yellow, &mut common, &mut patternline)
+
+    bg.pick_factory(&mut factory, &mut common, 4, Tile::Yellow)
         .unwrap();
 
     assert!(factory.is_empty());

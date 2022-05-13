@@ -10,7 +10,7 @@ use self::{
     wall::{Wall, WallView},
 };
 
-use super::Tile;
+use super::{CommonArea, Factory, Tile};
 
 pub mod floorline;
 pub mod patternline;
@@ -75,6 +75,34 @@ impl BuildingArea {
 
     pub fn get_floorline(&self) -> &FloorLine {
         &self.floorline
+    }
+
+    pub fn pick_factory(
+        &mut self,
+        factory: &mut Factory,
+        common_area: &mut CommonArea,
+        row_number: usize,
+        picked_tile: Tile,
+    ) -> Result<(), String> {
+        let tiles = factory
+            .0
+            .as_ref()
+            .ok_or_else(|| String::from("You tried picking an empty factory"))?;
+
+        if !tiles.contains(&picked_tile) {
+            return Err(format!(
+                "You tried picking tile {} from a factory that does not have it",
+                &picked_tile
+            ));
+        }
+        let pattern_line = &mut self.in_progress[row_number];
+        let (picked, non_picked): (Vec<Tile>, Vec<Tile>) =
+            tiles.iter().partition(|&tile| tile == &picked_tile);
+        let remaining = pattern_line.accept(picked_tile, picked.len())?;
+        common_area.add(&non_picked);
+        factory.0 = None;
+        self.floorline.add_tiles(&vec![picked_tile; remaining]);
+        Ok(())
     }
 }
 

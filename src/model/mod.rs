@@ -11,7 +11,7 @@ use std::{
 };
 
 use self::bag::Bag;
-use self::buildingarea::patternline::PatternLine;
+
 use self::tilecollection::{HasTileCollection, TileCollection};
 use self::view::render_pickables;
 
@@ -300,30 +300,6 @@ impl Factory {
     pub fn get_tiles(&self) -> Option<&[Tile]> {
         self.0.as_ref().map(|t| t.as_slice())
     }
-
-    pub fn pick(
-        &mut self,
-        picked_tile: Tile,
-        common_area: &mut CommonArea,
-        pattern_line: &mut PatternLine,
-    ) -> Result<(), String> {
-        let tiles = self
-            .0
-            .as_ref()
-            .ok_or_else(|| String::from("You tried picking an empty factory"))?;
-        if !tiles.contains(&picked_tile) {
-            return Err(format!(
-                "You tried picking tile {} from a factory that does not have it",
-                picked_tile
-            ));
-        }
-        let (picked, non_picked): (Vec<Tile>, Vec<Tile>) =
-            tiles.iter().partition(|&tile| tile == &picked_tile);
-        pattern_line.accept(picked_tile, picked.len())?;
-        common_area.add(&non_picked);
-        self.0 = None;
-        Ok(())
-    }
 }
 
 pub enum Direction {
@@ -556,11 +532,10 @@ impl<const N: usize> Game<N> {
         row_id: usize,
     ) -> Result<(), String> {
         let buildingarea = self.players[player_id].get_buildingarea_mut();
-        let row = buildingarea.get_row_mut(row_id);
         match source {
             TileSource::Factory(factory_id) => {
                 let factory = &mut self.factories[factory_id];
-                factory.pick(tile, &mut self.common_area, row)
+                buildingarea.pick_factory(factory, &mut self.common_area, row_id, tile)
             }
             TileSource::CommonArea => todo!(),
         }
